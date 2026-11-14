@@ -32,6 +32,7 @@ data/             # Experimental result artifacts
 | `code/experiments/extract_e4.py` | Spectral-truncation decay data extraction |
 | `code/experiments/parse_e1_seeds.py` | Per-seed result parsing |
 | `code/experiments/gap_fix.py` | Gap-fix: direct delta measurement (B2), PL constant estimation, reverse zero-shot |
+| `code/experiments/gap_fix2.py` | Gap-fix round 2: joint multi-system pre-training, expert-capacity ablation |
 
 ## Data
 
@@ -43,6 +44,7 @@ data/             # Experimental result artifacts
 | `data/supp_results.json` | Supplementary experiment results |
 | `data/supp_m2.json` | Baseline comparison results |
 | `data/gap_fix_results.json` | Gap-fix results (delta=0.005, PL mu, reverse zero-shot VRMSE 0.83) |
+| `data/gap_fix2_results.json` | Gap-fix round 2 results (joint multi-system, 4-expert ablation) |
 
 ## Data Loading
 
