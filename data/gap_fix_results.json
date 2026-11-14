@@ -1,0 +1,36 @@
+{
+  "A_delta": {
+    "mean": 0.9948717951774597,
+    "std": 0.010256409645080566,
+    "accuracy_mean": 0.9948717951774597,
+    "confusion": [
+      [
+        10,
+        0
+      ],
+      [
+        0,
+        29
+      ]
+    ],
+    "n_descriptors": 5,
+    "delta": 0.0051,
+    "delta_std": 0.0103,
+    "note": "delta = 1 - held-out classification accuracy (Assumption B2)"
+  },
+  "B_PL": {
+    "final_loss": 0.9668482542037964,
+    "initial_loss": 1.002098560333252,
+    "slope": -0.1358876924534085,
+    "mu": 127.05933519188383,
+    "eta": 0.001,
+    "convergence_factor": 0.8729406648081162
+  },
+  "C_reverse_zero_shot": {
+    "turb_in_domain_mse": 0.9701281785964966,
+    "zero_shot_mse": 0.6857748627662659,
+    "zero_shot_vrmse": 0.8295333277627487,
+    "zero_shot_rel_l2": 0.8295333518062925,
+    "shear_scratch_mse": 0.25515973567962646
+  }
+}
