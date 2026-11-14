@@ -109,7 +109,7 @@ accs = []
 for seed in range(5):
     dlt, acc = train_clf(AllX, Ally, seed)
     accs.append(acc)
-delta = float(np.mean(accs)); delta_std = float(np.std(accs))
+delta = float(1.0 - np.mean(accs)); delta_std = float(np.std(accs))
 print(f'  held-out classification accuracy: {np.mean(accs):.4f} +/- {np.std(accs):.4f}')
 print(f'  => delta (misclassification rate) = {delta:.4f} +/- {delta_std:.4f}')
 # confusion
