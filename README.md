@@ -1,32 +1,58 @@
 # The Well: Code and Data for Foundation Model Paper
 
-This repository contains the code and data artifacts supporting the manuscript
-"A Foundation Model for Physical World Models: Large-Scale Simulation Pre-training,
-Neural Operator Theory, and Zero-Shot Transfer" (submitted to JCP).
+Reproducibility artifacts for "A Foundation Model for Physical World Models:
+Large-Scale Simulation Pre-training, Neural Operator Theory, and Zero-Shot Transfer"
+(submitted to JCP).
 
 ## Structure
 
-- `code/` -- experiment source code
-- `data/` -- experimental results and data manifests
+```
+code/
+  model/          # Model architecture implementation
+  experiments/    # All experiment scripts
+  data/           # Data loading and preprocessing utilities
+data/             # Experimental result artifacts
+```
 
-## Code
+## Model
 
-- `zero_shot_local.py` -- zero-shot cross-system generalization experiment (Theorem 2 validation)
-- `scaling_study.py` -- pretraining convergence and scaling behavior study
+- `code/model/s1_well_pytorch.py` -- Unified tokenizer + physics-aware MoE backbone
+  with spectral convolutions. Supports synthetic mode (no download) and The Well mode.
+
+## Experiments
+
+| Script | Purpose |
+|--------|---------|
+| `code/experiments/zero_shot_local.py` | Zero-shot cross-system generalization (Theorem 2 validation) |
+| `code/experiments/scaling_study.py` | Pretraining convergence and scaling behavior grid |
+| `code/experiments/run_supp.py` | Supplementary experiments (tokenizer ablation, complexity, sensitivity) |
+| `code/experiments/run_m2.py` | Neural operator baseline comparison (FNO, DeepONet) |
+| `code/experiments/zero_shot_exp.py` | Earlier zero-shot experiment variant |
+| `code/experiments/zero_shot_v2.py` | Second zero-shot experiment variant |
+| `code/experiments/extract_e4.py` | Spectral-truncation decay data extraction |
+| `code/experiments/parse_e1_seeds.py` | Per-seed result parsing |
 
 ## Data
 
-- `zero_shot_results_full.json` -- full-model zero-shot results (ch=32)
-- `scaling_results.json` -- scaling grid results (model capacity x training data size)
-- `zero_shot_results.json` -- earlier zero-shot results
-- `supp_results.json` -- supplementary experiment results
-- `supp_m2.json` -- neural operator baseline comparison results
+| File | Description |
+|------|-------------|
+| `data/zero_shot_results_full.json` | Full-model zero-shot results (ch=32) |
+| `data/scaling_results.json` | Scaling grid results (capacity x data size) |
+| `data/zero_shot_results.json` | Earlier zero-shot results |
+| `data/supp_results.json` | Supplementary experiment results |
+| `data/supp_m2.json` | Baseline comparison results |
+
+## Data Loading
+
+- `code/data/download_well_subset.py` -- Parallel chunked download for The Well datasets
+- `code/data/extract_slice.py` -- Single-dataset slice extraction
+- `code/data/extract_slice_multi.py` -- Multi-dataset slice extraction
 
 ## Data Source
 
-The Well benchmark data is available at https://github.com/PolymathicAI/the-well.
-This repository contains only the experimental code and result artifacts generated
-by the authors; the raw simulation data is hosted by PolymathicAI.
+The Well benchmark: https://github.com/PolymathicAI/the_well [19].
+This repository contains only the authors' experimental code and result artifacts;
+raw simulation data are hosted by PolymathicAI.
 
 ## Citation
 
