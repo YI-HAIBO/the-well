@@ -31,6 +31,7 @@ data/             # Experimental result artifacts
 | `code/experiments/zero_shot_v2.py` | Second zero-shot experiment variant |
 | `code/experiments/extract_e4.py` | Spectral-truncation decay data extraction |
 | `code/experiments/parse_e1_seeds.py` | Per-seed result parsing |
+| `code/experiments/gap_fix.py` | Gap-fix: direct delta measurement (B2), PL constant estimation, reverse zero-shot |
 
 ## Data
 
@@ -41,6 +42,7 @@ data/             # Experimental result artifacts
 | `data/zero_shot_results.json` | Earlier zero-shot results |
 | `data/supp_results.json` | Supplementary experiment results |
 | `data/supp_m2.json` | Baseline comparison results |
+| `data/gap_fix_results.json` | Gap-fix results (delta=0.005, PL mu, reverse zero-shot VRMSE 0.83) |
 
 ## Data Loading
 
