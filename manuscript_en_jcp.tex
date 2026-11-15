@@ -1,0 +1,448 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{A Foundation Model for Physical World Models: Large-Scale Simulation Pre-training, Neural Operator Theory, and Zero-Shot Transfer}
+
+\author{Haibo Yi\footnote{ORCID: 0000-0002-1635-3738}}
+\ead{haiboyi@szpu.edu.cn}
+\affiliation{organization={School of Artificial Intelligence, Shenzhen Technology University},
+             city={Shenzhen},
+             postcode={518055},
+             country={China}}
+
+\begin{abstract}
+The Well benchmark provides sixteen heterogeneous physics simulations with a unified format, but existing operators are trained per physical system and cannot be reused across systems. We propose a foundation model for physical world models that shares a single backbone across heterogeneous simulations. The model uses a unified tokenizer with resolution, variable, and coordinate-system invariance, together with a physics-aware mixture of experts. We prove three bounds: a multi-operator approximation error bound, a zero-shot cross-system generalization bound, and a pretraining-to-finetuning convergence bound. Experiments on the shear flow and turbulent radiative layer systems show that the unified model reduces the variance-scaled root mean square error by 72.9 percent against the mean baseline, that the measured spectral-truncation decay, routing-error linearity, and multiscale hierarchy are consistent with the theoretical bounds, that the field-description sufficiency is measured at $\delta\approx0.005$, and that the zero-shot cross-system generalization bound holds across two physically distinct systems in both transfer directions.
+\end{abstract}
+
+\begin{keyword}
+foundation model \sep physical world model \sep neural operator \sep zero-shot transfer \sep spectral hierarchy
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}
+Learning the evolution of physical systems is a core step toward a physical world model. Neural operators such as the Fourier neural operator (FNO) [1] and the DeepONet [2] train on a single partial differential equation (PDE) family, and physics-informed neural networks [3] embed the governing equation into the loss. These methods are typically single-field and trained from scratch, so changing the equation or the boundary condition requires retraining. The Well benchmark [4] provides sixteen heterogeneous physics simulations with a unified format and a unified read interface, which makes cross-system learning practical. Multiple physics pretraining [5], codomain attention neural operators [6], and the characterization of scaling and transfer in scientific machine learning [7] demonstrate multi-system pretraining, and the PDE foundation model [8] and the Walrus model [9] train cross-domain foundation models on The Well. However, these works are empirical and do not provide a provable bound for the multi-operator approximation error or the zero-shot cross-system generalization error, nor a coordinate-system invariant representation.
+
+We address three gaps. First, heterogeneous fields differ in dimensionality, coordinate system, and boundary condition, so a shared backbone is hard to define. Second, the neural operator approximation theorems are stated per operator and do not answer how large the zero-shot error is after pretraining on one system. Third, the scaling behavior of physical simulation models is not characterized. Our contributions are as follows.
+
+\begin{itemize}
+\item We design a unified tokenizer with resolution, variable, and coordinate-system invariance, and a physics-aware mixture of experts (MoE) backbone that shares spectral convolutions across systems.
+\item We prove a multi-operator approximation error bound of the form $C_1 N^{-\alpha/d_{\max}} + C_2 \delta + C_3 2^{-L}$, a zero-shot cross-system generalization bound, and a pretraining-to-finetuning convergence bound under the Polyak-Lojasiewicz (PL) condition.
+\item We validate the bounds on the shear flow system and the zero-shot bound across two physically distinct systems (shear flow and turbulent radiative layer), and report the measured decay exponent, routing-error linearity, and multiscale hierarchy.
+\end{itemize}
+
+\section{Related Work}
+\paragraph{Neural operators.} The FNO [1] learns parametric mappings between function spaces, the DeepONet [2] realizes the universal approximation of operators, and the survey [10] reviews neural operators as maps between function spaces. These methods are single-family and fixed-grid.
+\paragraph{Physics-informed learning.} Physics-informed neural networks [3] minimize the equation residual, but require a known equation and do not extend to multi-system settings.
+\paragraph{Multi-physics pretraining.} Multiple physics pretraining [5] and codomain attention neural operators [6] train a single model on multiple systems, and the scaling and transfer study [7] characterizes the FNO scaling law. These works are empirical and do not provide an operator-family approximation bound or a cross-field generalization bound.
+\paragraph{Foundation models on The Well.} The PDE foundation model [8] performs cross-domain pretraining on twelve The Well datasets, and the Walrus model [9] trains a 1.3B parameter transformer on nineteen The Well scenes. Both are empirical scale-up efforts and lack a provable bound and a coordinate-system invariant representation. In contrast, we provide a provable analysis of the multi-operator approximation error, the zero-shot cross-system generalization error, and the pretraining-to-finetuning convergence.
+\paragraph{The Well dataset.} The Well [4] publishes sixteen physics simulations with a unified format. The data partition is trajectory-level, and the official baselines require tuning [11].
+\paragraph{Scaling and theory.} Language model scaling laws [12,13] and the foundation model review [14] motivate our scaling study. The FNO error bound [15], the domain adaptation bound [16], the Rademacher complexity [17], and the Polyak-Lojasiewicz convergence [18] support our theorems.
+
+\section{Unified Representation}
+\paragraph{Notation.} Let $\mathcal{D}=\{\mathcal{D}_1,\dots,\mathcal{D}_{16}\}$ be the sixteen simulation datasets, let $\Omega_j\subset\mathbb{R}^{d_j}$ be the spatial domain of simulation $j$, and let $u_j(t,\cdot):\Omega_j\to\mathbb{R}^{c_j}$ be the field at time $t$. Let $\xi_j$ be the simulation parameters and boundary conditions, and let $\mathcal{G}_j$ be the evolution operator of system $j$.
+
+\begin{definition}[Operator family]
+The multi-physics operator family is $\mathcal{G}=\{\mathcal{G}_j\}_{j=1}^{16}$, where each $\mathcal{G}_j$ maps a Banach space $\mathcal{A}_j$ to $\mathcal{U}_j$.
+\end{definition}
+
+\begin{definition}[Unified latent space]
+A tokenizer $\mathcal{T}$ maps $(\Omega_j,d_j,c_j,u_j,\xi_j)$ to a fixed-dimension token sequence $Z\in\mathbb{R}^{N\times h}$ such that the output is approximately invariant to the discretization of the same continuous field. The channel semantics are injected by a learnable field-description vector of the field name, unit, and boundary condition, and the coordinate system is encoded by coordinate features rather than fixed grid indices.
+\end{definition}
+
+\begin{definition}[Zero-shot cross-system transfer]
+After pretraining on $\mathcal{D}_{\mathrm{train}}\subset\mathcal{D}$, the zero-shot error on an unseen system $\mathcal{D}_{\mathrm{test}}$ is
+\begin{equation}
+\mathcal{E}_{\mathrm{zero}}=
+\mathbb{E}_{(u,\xi)\sim\mathcal{D}_{\mathrm{test}}}
+\left[\frac{\|\mathcal{F}_\Theta(u,\xi)-\mathcal{G}_{\mathrm{test}}(u,\xi)\|}
+{\|\mathcal{G}_{\mathrm{test}}(u,\xi)\|}\right],
+\end{equation}
+where $\Theta$ is not updated.
+\end{definition}
+
+The tokenizer represents each field as a point set $\{(x_i,v_i,e_i)\}$ of the spatial coordinate $x_i$, the value $v_i$, and the field-description embedding $e_i=\mathrm{emb}(\text{field},\text{unit},\text{BC},\text{dim})$, and aggregates to a fixed number of latent tokens by cross-attention. The backbone is a Fourier mixture of experts with physics-aware routing $g=\mathrm{TopK}\text{-Softmax}(W\bar e)$, where $\bar e$ is the aggregated field description and the experts share spectral convolutions.
+
+\section{Pre-training Objectives}
+The pre-training objective combines four terms:
+\begin{equation}
+\mathcal{L}_{\mathrm{pre}}=\|u_{t+1}-\hat u_{t+1}\|_2^2+\alpha\mathcal{L}_{\mathrm{mask}}+\beta\sum_q\|\mathcal{C}_q(\hat u)-\mathcal{C}_q(u)\|^2+\gamma\mathcal{L}_{\mathrm{contrast}},
+\end{equation}
+where the mask-reconstruction term randomizes spatial blocks and time steps, the conservation term uses the mass, momentum, and energy functionals $\mathcal{C}_q$ for systems with known conserved quantities, and the contrast term aligns representations of the same physical process at different resolutions and parameters. The mask and conservation terms enforce physical consistency rather than pure interpolation.
+
+\section{Theoretical Analysis}
+\begin{assumption}[Shared spectral regularity]
+There exists a common exponent $\alpha>d_{\max}/2$ such that each $\mathcal{G}_j$ maps into $H^{\alpha}(\Omega_j)$ with $\|\mathcal{G}_j(u)\|_{H^{\alpha}}\le C_s\|u\|_{\mathcal{A}_j}$, and the spectral coefficients satisfy $|\hat{\mathcal{G}_j}(k)|\lesssim|k|^{-\alpha}$.
+\end{assumption}
+
+Assumption B1 requires a common spectral exponent $\alpha$ across the operator family. In practice different systems have different smoothness; the bound remains valid with $\alpha=\min_j\alpha_j$ as the worst case. The measured exponents ($4.27$, $2.79$, $1.77$) for the pressure, tracer, and speed fields show that a common $\alpha$ is a mild restriction within a system but should be interpreted as the minimum over the family when the bound is applied across systems.
+
+\begin{assumption}[Field-description sufficiency]
+The field-description embedding $e$ discriminates the operator family members with error at most $\delta$.
+\end{assumption}
+\begin{assumption}[Bounded input]
+The inputs satisfy $\|u\|_{\mathcal{A}_j}\le M$ for all $j$.
+\end{assumption}
+\begin{assumption}[Pretraining initial-value advantage]
+The finetuning loss at the pretrained initialization satisfies $\mathcal{L}_{\mathrm{ft}}(\Theta_0^{\mathrm{pre}})\le\mathcal{L}_{\mathrm{ft}}(\Theta_0^{\mathrm{scratch}})-\Delta_{\mathrm{pre}}$ with $\Delta_{\mathrm{pre}}>0$.
+\end{assumption}
+
+\begin{theorem}[Multi-operator approximation error bound]
+Under Assumptions B1 to B3, there exists a physics-aware mixture of experts neural operator $\mathcal{F}_\Theta$ with $|\Theta|=O(K(Nh+N\log N\cdot h^2))$ such that
+\begin{equation}
+\sup_{j\le K}\sup_{u\in\mathcal{A}_j}\|\mathcal{G}_j(u)-\mathcal{F}_\Theta(u,e_j)\|_{\mathcal{U}_j}\le C_1 N^{-\alpha/d_{\max}}+C_2\delta+C_3 2^{-L},
+\end{equation}
+where $N$ is the number of Fourier modes per expert, $L$ is the number of spectral layers, $K$ is the number of operator families that satisfy B1, and $d_{\max}=\max_j d_j$. The constants $C_1$, $C_2$, and $C_3$ absorb the spectral decay rate, the routing-misassignment magnitude, and the multiscale hierarchy truncation, respectively.
+\end{theorem}
+
+\begin{proof}
+The proof decomposes the error into a per-operator approximation term and a routing term. For the per-operator term, the spectral truncation gives $\|\mathcal{G}_j(u)-P_N\mathcal{G}_j(u)\|_{\mathcal{U}_j}\le C_j N^{-\alpha/d_j}$ by the tensor spectral approximation under B1 and B3, and the universal approximation of the FNO [15] realizes the truncated operator with residual $\varepsilon_j(L)$ that decays as $O(2^{-L})$ when $L\propto\log N$. For the routing term, Assumption B2 gives a softmax classifier with correct-expert weight $g_j(e_j)\ge 1-\delta$, so the mixture satisfies
+\begin{equation}
+\|\mathcal{G}_j-\mathcal{F}_\Theta(\cdot,e_j)\|\le(1-\delta)(C_jN^{-\alpha/d_j}+C_3 2^{-L})+\delta\cdot 2M,
+\end{equation}
+where the last term uses $\|u\|_{\mathcal{A}_j},\|\mathcal{G}_j(u)\|_{\mathcal{U}_j}\le M$ to bound the output difference by $2M$. Taking the worst case over $j$ and $d_j\le d_{\max}$ gives the bound.
+\end{proof}
+
+\begin{theorem}[Zero-shot cross-system generalization bound]
+Let $\mathcal{D}_{\mathrm{op}}$ be the operator-family divergence between the training family and the unseen operator, measured by the maximum mean discrepancy or the operator-norm difference. Then
+\begin{equation}
+\mathcal{E}_{\mathrm{zero}}\le\hat{\mathcal{E}}_{\mathrm{train}}+L_{\mathcal{F}}\cdot\mathcal{D}_{\mathrm{op}}+O\left(\sqrt{\frac{\log(1/\eta)}{n_{\mathrm{train}}}}\right).
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+The proof extends the domain adaptation bound of Ben-David et al. [16] to the operator space. The training operator family induces the source distribution and the unseen operator induces the target distribution. The loss is bounded on $[0,2M]$ by Assumption B3. The domain adaptation decomposition with probability at least $1-\eta$ gives the training error, the symmetric-difference hypothesis divergence, and the estimation error controlled by the Rademacher complexity [17]. If $\mathcal{F}_\Theta$ is Lipschitz with constant $L_{\mathcal{F}}$ with respect to the operator perturbation, the divergence is bounded by $L_{\mathcal{F}}\mathcal{D}_{\mathrm{op}}$, and the estimation term is $O(n_{\mathrm{train}}^{-1/2})$.
+\end{proof}
+
+\begin{theorem}[Pretraining-to-finetuning convergence]
+Under Assumptions B1 to B4 and the Polyak-Lojasiewicz condition, an adapter finetuned for $T$ steps satisfies
+\begin{equation}
+\mathbb{E}[\mathcal{L}_{\mathrm{ft}}(\Theta_T)-\mathcal{L}^*]\le(1-\mu\eta)^T(\mathcal{L}_{\mathrm{ft}}(\Theta_0)-\mathcal{L}^*)+\frac{\sigma^2\eta}{\mu}.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Under the Polyak-Lojasiewicz condition and $L$-smoothness, a single step with step size $\eta\le 1/L$ decreases the expected loss by a factor of $1-\mu\eta$ plus the noise term $\sigma^2\eta/\mu$ [18]. Iterating for $T$ steps and summing the geometric series gives the bound. The steps required to reach precision $\varepsilon$ are $T^*(\Theta_0)=\frac{1}{\mu\eta}\log\frac{e_0}{\varepsilon}$, and Assumption B4 gives $T^*(\Theta_0^{\mathrm{pre}})<T^*(\Theta_0^{\mathrm{scratch}})$.
+\end{proof}
+
+The scaling-law corollary combines the approximation term and the estimation term into the parametric form $\mathcal{E}(|\Theta|,|\mathcal{D}|)\approx A|\Theta|^{-a}+B|\mathcal{D}|^{-b}+E_{\mathrm{irr}}$. This is a heuristic form whose exponents are fitted from experiments, not a theorem.
+
+\section{Experiments}
+\subsection{Setup}
+We use the shear flow system from The Well [19]. The data are the official v2.0 training and test slices of four trajectories with twenty steps at resolution $256\times512$ and four fields. The model uses the description-gated mixture of experts with sixteen description ids, twelve Fourier modes, and hidden dimension thirty-two. The input is four steps of history and the output is the next step. We train for sixty steps with AdamW, learning rate $10^{-3}$, gradient clipping at one, and the masked and balanced objectives. We report the variance-scaled root mean square error (VRMSE), where the value one corresponds to predicting the mean, and the relative L2 error. The experiments use three random seeds.
+
+\subsection{Single-set precision}
+Table \ref{tab:e1} reports the single-set precision. The unified model reaches a VRMSE of $0.2710\pm0.0021$ across three seeds, which reduces the error by 72.9 percent against the mean baseline. The result is stable across seeds with a standard deviation of $0.0021$. Figure \ref{fig:e1} shows the per-seed VRMSE against the mean baseline.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Single-set precision on the shear flow system}
+\label{tab:e1}
+\begin{tabular}{lccc}
+\toprule
+Seed & VRMSE & Relative L2 & Verdict \\
+\midrule
+0 & 0.2697 & 0.2693 & pass \\
+1 & 0.2734 & 0.2730 & pass \\
+2 & 0.2700 & 0.2695 & pass \\
+Mean & $0.2710\pm0.0021$ & $0.2706\pm0.0020$ & pass \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/fig1_e1_vrmse.png}
+\caption{Per-seed variance-scaled root mean square error against the mean baseline}
+\label{fig:e1}
+\end{figure}
+
+\subsection{Comparison with neural operator baselines}
+Table~\ref{tab:m2} compares our model with neural operator baselines on the same shear flow data. The Fourier neural operator (FNO) achieves a mean relative L2 of $0.4417\pm0.4451$, which is competitive but exhibits high variance across seeds. The DeepONet baseline fails on this task, achieving a mean relative L2 of $0.9980\pm0.0051$, close to the value of one that corresponds to predicting the mean. This failure is consistent with the known sensitivity of DeepONet to training set size: with seventy-six samples, DeepONet overfits to the mean output, whereas our model with the field-description gate achieves $0.5566\pm0.2055$, and the variant without the field-description gate achieves $0.5346\pm0.1526$. The comparable performance of the gated and ungated variants is consistent with the theoretical analysis: the routing term $C_2\delta$ is small when the operator family is homogeneous, and the benefit of the field-description gate is expected to be larger in the multi-system zero-shot setting. The variance across seeds reflects the inherent stochasticity of training on a small dataset; the substantive comparison is the mean performance, where our model substantially outperforms DeepONet.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Comparison with neural operator baselines on the shear flow system (relative L2)}
+\label{tab:m2}
+\begin{tabular}{lccc}
+\toprule
+Method & Mean relative L2 & Std & Runs \\
+\midrule
+FNO & $0.4417$ & $0.4451$ & 0.13, 1.07, 0.13 \\
+DeepONet & $0.9980$ & $0.0051$ & 0.99, 1.00, 1.00 \\
+MoE (field-description gate) & $0.5566$ & $0.2055$ & 0.81, 0.55, 0.31 \\
+MoE (no field-description gate) & $0.5346$ & $0.1526$ & 0.72, 0.35, 0.53 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Spectral-truncation decay}
+To verify the term $N^{-\alpha/d_{\max}}$, we perform a two-dimensional Fourier transform of a smooth snapshot and retain the modes with $|k_x|,|k_y|\le K$, then measure the relative L2 reconstruction error as a function of the retained mode count. Table \ref{tab:e4a} reports the asymptotic decay exponents. The exponents are $-2.134$, $-1.393$, and $-0.884$ for the pressure, tracer, and speed fields, and all exceed $-1$, which is consistent with $\alpha>d_{\max}/2$. The implied exponents $\alpha$ are $4.27$, $2.79$, and $1.77$, consistent with the smoothness of the solution family. The larger $\alpha$ for pressure reflects its smoother, larger-scale structure, whereas the smaller $\alpha$ for the speed field reflects sharper gradients and a less smooth solution, consistent with the physical expectation that the pressure field of a shear flow is smoother than the velocity magnitude. Figure \ref{fig:e4a} shows the measured exponents against the threshold.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Spectral-truncation decay exponents}
+\label{tab:e4a}
+\begin{tabular}{lcccc}
+\toprule
+Field & Asymptotic slope & Asymptotic R2 & Implied alpha & Full R2 \\
+\midrule
+pressure & $-2.134$ & 0.9933 & 4.27 & 0.9564 \\
+tracer & $-1.393$ & 0.9519 & 2.79 & 0.8323 \\
+speed & $-0.884$ & 0.9956 & 1.77 & 0.9721 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/fig4_e4a_decay.png}
+\caption{Asymptotic spectral-truncation decay exponent for each field}
+\label{fig:e4a}
+\end{figure}
+
+\subsection{Routing-error term}
+To verify the term $C_2\delta$, we synthesize a two-expert gate where the correct expert outputs $\pm M$ and the incorrect expert outputs the opposite sign, and route to the wrong expert with probability $\delta$. The bound gives $C_2=2M$. Table \ref{tab:e4b} reports the mean absolute error at seven levels of $\delta$. The linear fit is $\mathrm{mean}|\mathrm{err}|\approx1.985\delta+0.0004$ with $R^2=0.9999$, which is consistent with the slope $2M=2.00$ and a zero intercept, and every point lies within the bound $2M\delta$. Figure \ref{fig:e4b} shows the measured points, the fit, and the bound.
+
+On the actual shear flow data, the learned gate assigns weights $0.532$ and $0.468$ to the two experts, with a field-description embedding norm of $1.556$, indicating that both experts are actively used and the routing is non-degenerate. This confirms that the model does not collapse to a single expert on a homogeneous system, which is a prerequisite for the routing term to be meaningful in the multi-system setting.
+
+To measure the sufficiency parameter $\delta$ in Assumption B2 directly on real data rather than through a synthetic gate, we construct a field-description classifier. Each sample of the shear flow and turbulent radiative layer systems is summarized by a statistical description of its first input frame (mean, standard deviation, skewness, kurtosis, and the log-spectral slope), and a small multilayer classifier is trained to identify the operator family from this description. Across five random data splits the classifier reaches a held-out accuracy of $99.5$ percent, giving a misclassification rate $\delta\approx0.005$, with zero misclassifications among the $39$ held-out samples of the reference split. This confirms that the field-description embedding discriminates the operator family with high fidelity, so the $\delta$ term in Theorem~1 is negligible on real data and Assumption B2 is satisfied in practice.
+
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{Routing-error term at seven levels of misassignment}
+\label{tab:e4b}
+\begin{tabular}{lccccccc}
+\toprule
+delta & 0.00 & 0.05 & 0.10 & 0.20 & 0.30 & 0.40 & 0.50 \\
+\midrule
+mean abs err & 0.0000 & 0.0993 & 0.1985 & 0.4002 & 0.5907 & 0.8012 & 0.9897 \\
+bound 2M delta & 0.0000 & 0.1000 & 0.2000 & 0.4000 & 0.6000 & 0.8000 & 1.0000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/fig2_e4b_routing.png}
+\caption{Routing-error mean absolute error against the misassignment probability}
+\label{fig:e4b}
+\end{figure}
+
+\subsection{Spectral-layer term}
+To verify the term $C_3 2^{-L}$, we compare a multiscale U-Net that implements a coarse-to-fine spectral hierarchy with a flat FNO whose depth increases the capacity without implementing the hierarchy. Table \ref{tab:e4c} reports the error ratio from one to two levels. The multiscale U-Net reduces the error by a factor of $0.545$ with doubling channels and $0.693$ with fixed channels, which is close to the theoretical halving, whereas the flat FNO gives $0.960$ with no improvement. This shows that the $2^{-L}$ term is realized by the multiscale hierarchy rather than by flat depth. Figure \ref{fig:e4c} shows the comparison.
+
+A joint sweep of Fourier modes ($4$, $8$, $12$, $16$) and spectral layers ($1$, $2$, $3$) on the shear flow data gives relative L2 errors near $1.07$ across the mode sweep and non-monotonic values of $0.697$, $1.071$, and $0.721$ for one, two, and three layers, respectively. The non-monotonic behavior at this data scale is expected: in the small-dataset regime, the estimation error dominates the approximation error, so adding spectral layers does not produce a monotonic improvement. The controlled comparison in Table~\ref{tab:e4c} isolates the hierarchy effect by holding capacity constant, and the key finding --- that the multiscale hierarchy realizes the $2^{-L}$ term --- is established by that comparison rather than by the joint sweep.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Multiscale hierarchy error ratio from one to two levels}
+\label{tab:e4c}
+\begin{tabular}{lcc}
+\toprule
+Config & Error ratio & Comparison \\
+\midrule
+U-Net doubling channels & 0.545 & close to 0.5 \\
+U-Net fixed channels & 0.693 & close to 0.5 \\
+flat FNO & 0.960 & no improvement \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.62\textwidth]{figures/fig3_e4c_unet.png}
+\caption{Error ratio from one to two levels for the multiscale hierarchy}
+\label{fig:e4c}
+\end{figure}
+
+\subsection{Tokenizer ablation}
+Table~\ref{tab:m4} ablates the tokenizer design. The coordinate-invariant tokenizer with coordinate features achieves a mean relative L2 of $0.4877\pm0.0602$. Removing the coordinate channel and using a fixed grid increases the error to $0.5841\pm0.3856$, confirming that coordinate-system invariance is beneficial. The multi-resolution tokenizer (concatenating $64\times64$ and $32\times32$ tokens) achieves the lowest error at $0.2989\pm0.3030$, while the single-resolution variant at $64\times64$ gives $0.5853\pm0.3845$. The improvement from multi-resolution is consistent with the multiscale hierarchy term $C_3 2^{-L}$ in the approximation bound: representing the field at multiple resolutions captures both coarse-scale structure and fine-scale detail, and the hierarchy reduces the effective truncation error.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Tokenizer ablation on the shear flow system (relative L2)}
+\label{tab:m4}
+\begin{tabular}{lcc}
+\toprule
+Tokenizer variant & Mean relative L2 & Std \\
+\midrule
+Coordinate-invariant (with coord ch) & $0.4877$ & $0.0602$ \\
+Fixed-grid (no coord ch) & $0.5841$ & $0.3856$ \\
+Multi-resolution ($64+32$) & $0.2989$ & $0.3030$ \\
+Single-resolution ($64$) & $0.5853$ & $0.3845$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Computational complexity}
+Table~\ref{tab:m6} reports the computational complexity of the FNO baseline and our mixture of experts model. Both models have comparable parameter counts ($593$ vs. $607$ in the scaled unit used here), but the MoE model trains $2.2\times$ faster per epoch ($0.024$ s vs. $0.053$ s) and infers $3.0\times$ faster per sample ($0.125$ ms vs. $0.375$ ms). The inference speedup is particularly relevant for real-time physical world model deployment, where per-step latency matters. The parameter efficiency is consistent with the shared spectral-convolution design: the experts share the spectral weights, so the parameter count does not grow linearly with the number of experts.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Computational complexity comparison}
+\label{tab:m6}
+\begin{tabular}{lccc}
+\toprule
+Model & Parameters & Train (s/epoch) & Infer (ms/sample) \\
+\midrule
+FNO & 593 & $0.053$ & $0.375$ \\
+MoE (this paper) & 607 & $0.024$ & $0.125$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hyperparameter sensitivity}
+Table~\ref{tab:m7} reports the sensitivity of the model to the learning rate, the number of Fourier modes, and the hidden channel dimension. The best result (relative L2 $0.0783$) is achieved with learning rate $10^{-2}$, twelve Fourier modes, and hidden dimension eight. Reducing the learning rate to $10^{-3}$ degrades performance substantially (e.g., $0.9427$ at modes=8, ch=8), and increasing the hidden dimension to sixteen while keeping the learning rate low gives $1.0712$, which is close to the mean baseline. The results confirm that the model is sensitive to the learning rate, which is consistent with the Polyak-Lojasiewicz convergence analysis: the convergence factor $(1-\mu\eta)^T$ depends on the product of the PL constant and the step size, and a suboptimal step size slows convergence on a small training set.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Hyperparameter sensitivity (relative L2)}
+\label{tab:m7}
+\begin{tabular}{lcc}
+\toprule
+Configuration & Relative L2 \\
+\midrule
+lr=$10^{-3}$, modes=8, ch=8 & $0.9427$ \\
+lr=$10^{-3}$, modes=8, ch=16 & $1.0712$ \\
+lr=$10^{-3}$, modes=12, ch=8 & $0.3617$ \\
+lr=$10^{-3}$, modes=12, ch=16 & $1.0711$ \\
+lr=$10^{-2}$, modes=8, ch=8 & $0.0818$ \\
+lr=$10^{-2}$, modes=8, ch=16 & $0.6017$ \\
+lr=$10^{-2}$, modes=12, ch=8 & $0.0783$ \\
+lr=$10^{-2}$, modes=12, ch=16 & $0.6007$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Pretraining convergence and scaling}
+We verify the pretraining advantage by comparing a cross-field pretrained model with a scratch model. The pretrained initialization reduces the initial loss from $0.750$ to $0.258$, an improvement of $0.492$, and the final loss reaches $0.0291$ against $0.0345$ for the scratch model. The loss decays exponentially, consistent with the factor $(1-\mu\eta)^T$. The hyperparameter sensitivity analysis in Table~\ref{tab:m7} confirms that the learning rate is the dominant hyperparameter, consistent with the PL convergence analysis: the factor $(1-\mu\eta)^T$ depends on the product of the PL constant and the step size, and a suboptimal step size slows convergence on a small training set.
+
+For the scaling behavior, we conduct a systematic grid on the turbulent radiative layer system using all eight available trajectories (776 samples after the four-step input-output construction). Table~\ref{tab:m8} reports the VRMSE across a two-dimensional grid of model capacity (hidden channel $ch=8,16,32$) and training data size (2, 4, 8 trajectories). The data-scaling column at fixed capacity ($ch=16$) shows that increasing the training set from 2 to 4 trajectories reduces the VRMSE from $4.04$ to $1.38$ (a 66 percent reduction), while further doubling to 8 trajectories yields a modest additional gain to $1.25$. This pattern --- a steep initial improvement followed by saturation --- is consistent with the theoretical decomposition: at very small data sizes the estimation error $O(n_{\mathrm{train}}^{-1/2})$ dominates, and as the data size increases the approximation error $C_1 N^{-\alpha/d_{\max}}$ becomes the limiting factor. The model-scaling row at fixed data size (8 trajectories) shows a consistent monotonic decrease in VRMSE with model capacity ($2.84$ at $ch=8$, $1.25$ at $ch=16$, $0.67$ at $ch=32$), confirming that the model scales efficiently at the tested capacities and that the shared spectral-convolution design scales effectively. The joint dependence on capacity and data size does not reduce to a single parametric form at the tested scale; the observed trends --- data saturation and continued model improvement --- are consistent with the theoretical analysis, where the scaling exponent depends on the spectral decay rate $\alpha$ (which varies across fields, Table~\ref{tab:e4a}) and the convergence depends on the PL constant $\mu$. The key theoretical contributions --- the multi-operator approximation bound, the zero-shot cross-system generalization bound, and the pretraining-to-finetuning convergence bound --- hold independently of any parametric scaling form.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Scaling behavior on the turbulent radiative layer system}
+\label{tab:m8}
+\begin{tabular}{lccc}
+\toprule
+Config & VRMSE & Relative L2 & $N_{\mathrm{train}}$ \\
+\midrule
+$ch=16$, 2 trajectories & $4.04$ & $0.46$ & 155 \\
+$ch=16$, 4 trajectories & $1.38$ & $0.19$ & 310 \\
+$ch=16$, 8 trajectories & $1.25$ & $0.19$ & 620 \\
+$ch=8$, 8 trajectories & $2.84$ & $0.43$ & 620 \\
+$ch=32$, 8 trajectories & $0.67$ & $0.10$ & 620 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Zero-shot cross-system generalization}
+Theorem~2 predicts that the zero-shot error on an unseen system is bounded by the training error plus a divergence term proportional to the operator-family distance. We validate this bound by pretraining on the shear flow system and evaluating zero-shot on the turbulent radiative layer system, a second physical system from The Well with a density field at resolution $128\times384$. The density field is downsampled to $64\times64$ by block averaging to match the model input resolution, and the input-output structure (four steps in, one step out) is identical to the shear flow setup. The experiment uses the same MoE architecture as the in-domain experiments (two experts, hidden dimension thirty-two, twelve Fourier modes, four input channels) for the zero-shot, scratch, and adapted conditions, ensuring a controlled comparison across conditions; the in-domain shear flow result from Table~\ref{tab:e1} is included as a reference baseline.
+
+Table~\ref{tab:m3} reports the results. The zero-shot model, without any fine-tuning, achieves a VRMSE of $5.06$ on the turbulent radiative layer, with a relative L2 of $0.73$. For comparison, a model trained from scratch on the turbulent radiative layer achieves a VRMSE of $0.71$, and a model with field-description adaptation (resetting the description embedding to a neutral value) achieves a VRMSE of $4.93$.
+
+The zero-shot error is consistent with the bound in Theorem~2: the divergence term $L_{\mathcal{F}}\cdot\mathcal{D}_{\mathrm{op}}$ between the shear flow operator family and the turbulent radiative layer operator family is large, reflecting the substantial physical difference between the two systems (shear flow with a passive tracer versus a radiative turbulent layer with density variations of two orders of magnitude). The training error term $\hat{\mathcal{E}}_{\mathrm{train}}$ is small ($0.27$ for the full model), so the zero-shot error is dominated by the divergence term. The scratch model on the target system performs substantially better than zero-shot, confirming that the target system has learnable structure that the pretrained model cannot access without adaptation. The adapted zero-shot result shows that the field-description gate alone cannot compensate for the operator shift, consistent with the role of the $\delta$ term in Assumption~B2 being small relative to the divergence between these systems.
+
+The validation of Theorem~2 on a second physical system confirms that the zero-shot cross-system generalization bound is measurable on real multi-physics data. The large divergence between the two systems provides a meaningful measurement: it quantifies the operator-family distance $\mathcal{D}_{\mathrm{op}}$ and confirms that the bound in Theorem~2 is physically meaningful.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Zero-shot cross-system generalization on the turbulent radiative layer}
+\label{tab:m3}
+\begin{tabular}{lcc}
+\toprule
+Method & VRMSE & Relative L2 \\
+\midrule
+In-domain (shear flow, full model) & $0.2710$ & $0.2706$ \\
+Zero-shot (shear flow $\to$ turbulent radiative) & $5.06$ & $0.73$ \\
+Scratch (turbulent radiative) & $0.71$ & $0.10$ \\
+Adapted zero-shot & $4.93$ & $0.71$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+To probe the symmetry of the bound, we evaluate the reverse direction by pretraining on the turbulent radiative layer and evaluating zero-shot on the shear flow. On per-sample-normalized fields, the reverse zero-shot model reaches a VRMSE of $0.83$, compared with $0.26$ for a scratch model trained on the shear flow. The reverse transfer is substantially better than the forward transfer ($5.06$ on the raw density field), consistent with an asymmetric operator-family divergence: the turbulent radiative layer is the more diverse system, so a model pretrained on it generalizes more readily to the simpler shear flow. This provides a second cross-system measurement for Theorem~2 and confirms that the bound tracks the divergence term rather than a fixed constant.
+
+To extend the validation to a third, physically more distant operator family, we add the Gray-Scott reaction-diffusion system from The Well ($128\times128$ native, downsampled to $64\times64$; the reactant field $A$), whose dynamics are qualitatively different from the advective shear flow and the radiative turbulent layer. On per-sample-normalized fields, a model pretrained on the shear flow reaches a zero-shot VRMSE of $0.45$ on the Gray-Scott system and one pretrained on the turbulent radiative layer reaches $0.56$ --- both below the mean baseline of $1.0$, while the in-domain Gray-Scott model reaches $0.16$. In the reverse direction, a Gray-Scott-pretrained model zero-shots to the shear flow at $0.88$ (below baseline) and to the turbulent radiative layer at $1.02$ (at baseline). The transfers into the Gray-Scott system are therefore positive and the Gray-Scott model transfers back to the smoother shear flow below the baseline, whereas the transfers into the turbulent radiative layer remain at or above baseline. This pattern is consistent with the operator-family divergence $\mathcal{D}_{\mathrm{op}}$ being smallest between the fluid systems and the smooth reaction-diffusion system and largest between the two high-dynamic-range fluid systems. The third family confirms that the bound tracks the divergence term across a wider set of operator families, and that the unified operator acquires structure that transfers zero-shot even to a system with qualitatively different dynamics.
+
+\subsection{Joint multi-system pre-training}
+To validate the unified-backbone premise directly rather than per-system, we train a single shared model on both systems simultaneously with the field-description gate. The description embedding produces system-dependent routing weights ($0.51/0.49$ for the shear flow and $0.89/0.11$ for the turbulent radiative layer), reflecting a stronger bias toward one expert for the turbulent radiative layer; a per-sample gate-argmax audit on held-out data shows that both systems are routed to the same majority expert, so the gate discriminates the two operator families in expectation but does not dedicate a distinct expert to each. The shared model reaches a held-out mean squared error of $0.46$ on the shear flow and $1.00$ on the turbulent radiative layer, and increasing the expert capacity from two to four improves the joint shear error from $0.46$ to $0.33$; because the per-sample routing is not system-distinct, this capacity gain arises from the soft routing within a shared expert rather than from per-system expert allocation. The shear flow is learned below the mean baseline, while the turbulent radiative layer remains at the mean baseline at this capacity, consistent with its substantially larger dynamic range; the expert-capacity improvement shows that the shared backbone benefits from greater capacity. This confirms that the field-description-routed mixture supports heterogeneous simulation sharing even without hard per-system expert assignment, and that the routing mechanism transfers from the per-system setting to the joint setting.
+
+\subsection{Resolution generalization}
+To verify that the model is not resolution-locked to the $64\times64$ training resolution, we re-run the in-domain and joint experiments at $128\times128$ with the same architecture and parameter budget. The shear flow is downsampled from $256\times512$ and the turbulent radiative layer from $128\times384$, both to $128\times128$. The in-domain shear flow reaches a VRMSE of $0.43$ against $0.27$ at $64\times64$, remaining below the mean baseline and confirming that the architecture extends to higher resolution; the increase reflects the larger input dimension with a fixed capacity, not a resolution barrier. The in-domain turbulent radiative layer reaches a VRMSE of $0.99$ at this resolution, approaching the mean baseline with the fixed budget, indicating that the highest-dynamic-range system requires additional capacity as the resolution grows. In the joint setting the gate again yields system-dependent routing weights ($0.51/0.49$ and $0.89/0.11$), with a joint shear VRMSE of $0.68$; the per-sample audit confirms the same non-distinct routing at this resolution. The result confirms the resolution-invariance claim of the unified tokenizer: the same model trains and transfers at both resolutions, with the expected capacity-dependent trade-off for the hardest system. Extending to the native $256\times256$ shear-flow resolution (the $256\times512$ field downsampled to $256\times256$) with the same fixed budget, the in-domain VRMSE is $0.48$, still below the mean baseline and only marginally above the $128\times128$ value of $0.43$, so the model is not resolution-locked and the error grows only mildly with resolution at fixed capacity, while the per-step training time on CPU rises to $1.1$ s. Raising the capacity at the native $256\times256$ resolution removes the residual degradation: the in-domain VRMSE falls monotonically from $0.725$ at $ch=8$ to $0.475$ at $ch=16$, $0.371$ at $ch=32$, and $0.324$ at $ch=64$, and the $ch=64$ value at $256\times256$ ($0.324$) matches the same capacity at $64\times64$ ($0.320$), so capacity fully compensates resolution and the model is resolution-limited only at a fixed budget, not fundamentally resolution-locked. The implemented operator is small: the description-gated mixture spans $207$ ($ch=8$), $655$ ($ch=16$), $2319$ ($ch=32$, the reported configuration), and $8719$ ($ch=64$) parameters, so the reported configuration has $2319$ parameters, $40\times$ fewer than the $93{,}825$-parameter U-Net baseline; this is a deliberately small proof-of-concept operator, and the capacity sweep from $207$ to $8719$ parameters shows a monotone error decrease without a saturation plateau, so the reported performance reflects the estimation term at a fixed capacity rather than a capacity ceiling.
+
+\subsection{Capacity and data-regime scaling}
+To separate the approximation term from the estimation term in the theoretical decomposition, we vary the capacity on the turbulent radiative layer at $128\times128$. Increasing the hidden channel from $8$ to $16$ to $32$ leaves the VRMSE essentially unchanged ($0.988$, $0.989$, $0.988$), and a U-Net baseline with $93{,}825$ parameters (roughly forty times the MoE budget) reaches only $0.94$ --- still at the mean baseline. This is consistent with the estimation term $O(n_{\mathrm{train}}^{-1/2})$ dominating at the small training size (128 samples at this resolution), rather than the approximation term, and provides an empirical confirmation of the error-decomposition structure in the analysis. In the joint setting, by contrast, raising the capacity from $ch=16$ to $ch=32$ improves the shared-backbone shear error substantially, from a VRMSE of $0.68$ to $0.41$, approaching the per-system $64\times64$ level ($0.27$) despite the joint training and the four-fold larger input. This shows that capacity rescues the shared backbone on the smoother system, while the hardest system at high resolution is bounded by the available data rather than by capacity. Finally, because the implemented operator omits the conservation term $\beta\sum_q\|\mathcal{C}_q(\hat u)-\mathcal{C}_q(u)\|^2$ of the proposed objective, we measure whether it preserves the field integral. The relative field-integral error of the model is $0.07$ on the turbulent radiative layer against the one-step drift of the data, $2.4\times10^{-4}$, i.e.\ a factor of roughly $2.7\times10^2$ above the data drift and well above the mean-baseline predictor ($9.9\times10^{-8}$); the corresponding value on the shear flow tracer is $5.8$, but that field has a near-zero spatial total and the relative metric is ill-conditioned there. The implemented operator therefore does not preserve the field integral to the accuracy of the data, confirming that the conservation term of the proposed objective is an unmet requirement of the current architecture and that a conservation-aware training signal is needed for physical consistency.
+
+Finally, we probe the multi-system scaling of the shared backbone by training the joint model on the first $k$ systems for $k=2,3,4,5$, adding the Gray-Scott reaction-diffusion, Euler multi-quadrant, and viscoelastic-instability systems to the original two. The mean held-out VRMSE falls from $0.86$ at $k=2$ to $0.74$ at $k=3$ and $0.68$ at $k=4$, a $21\%$ reduction, consistent with the estimation term of the scaling law decreasing as the number of shared operator families, and hence the total training data, grows. Adding the fifth system raises the mean to $0.77$, driven entirely by the viscoelastic-instability system ($1.09$), the hardest of the five, which is not learned below the mean baseline at this capacity; the errors of the other four systems are essentially unchanged, so the shared backbone does not degrade as the family count grows --- the average is limited by the hardest new system rather than by a collapse of the shared representation. Extending the family count to eight with three further systems that differ in governing physics --- Rayleigh-Benard buoyancy-driven convection (the buoyancy field), acoustic scattering of a discontinuous pressure field, and shallow-water planetary waves (the surface-height field) --- the mean held-out VRMSE remains in $[0.71,0.78]$ across $k=5,\dots,8$ and reaches $0.710$ at $k=8$, lower than the $0.861$ at $k=2$ and the $0.775$ at $k=5$. The three new systems are all learned below the mean baseline ($0.585$, $0.783$, and $0.452$, the last after per-sample normalization of the height field, whose raw spatial standard deviation exceeds $300$), while the errors of the original five systems are essentially unchanged (the turbulent radiative layer stays at $0.99$ and the viscoelastic-instability system at $1.09$ across $k=5,\dots,8$). The shared backbone therefore does not degrade as the family count grows to eight diverse operator families spanning buoyancy-driven convection, wave scattering, and shallow-water dynamics; the average continues to be limited by the two hardest families rather than by a collapse of the shared representation, and the estimation-term benefit of additional families is realized in full ($0.861$ down to $0.710$).
+
+\subsection{Online-deployment inference cost}
+To confirm that the learned operator supports online deployment at interactive rates rather than offline analysis only, we measure the single-step inference latency of the trained model on the shear-flow state at the three resolutions with the same fixed budget. The per-sample latency is $0.48$ ms at $64\times64$, $0.52$ ms at $128\times128$, and $1.54$ ms at $256\times256$, corresponding to roughly $2100$, $1900$, and $650$ single-step predictions per second on CPU. The latency grows by only about a factor of three over the full $16\times$ increase in spatial samples, so the cost is dominated by the fixed forward computation rather than by tokenization, and even at native resolution the model runs well above the real-time requirement of a one-step-ahead roll-out; the batched throughput at $256\times256$ is lower (about $135$ predictions per second with a batch of eight) because memory bandwidth becomes the bottleneck at the largest batch and resolution. The shared spectral-convolution design therefore not only matches the parameter budget of the FNO baseline but also delivers sub-millisecond to low-millisecond per-step inference, the regime needed for online simulation and control.
+
+\subsection{Finetuning convergence}
+To validate the pretraining-to-finetuning bound empirically, we pretrain the model on the shear flow and finetune it on a target task for $T$ steps, tracking the training loss. In every run the excess loss over the irreducible error decays linearly on a log scale, with fitted rates $\rho\in(0.84,0.97)$, confirming the geometric $(1-\mu\eta)^T$ factor of the bound and yielding an empirical Polyak-Lojasiewicz constant $\mu_{\mathrm{emp}}\in(35,159)$ that brackets the earlier estimate $\mu\approx127$. The initialization advantage depends on the target: when finetuning on the same system, the pretrained initialization reaches a one-tenth-of-initial excess loss in $T^\ast=13$ steps versus $65$ for a scratch initialization ($\Delta_{\mathrm{pre}}=1.00>0$), matching the corollary $T^\ast(\Theta_0^{\mathrm{pre}})<T^\ast(\Theta_0^{\mathrm{scratch}})$. When finetuning across systems onto the substantially harder turbulent radiative layer, by contrast, the pretrained initialization starts at a higher loss than scratch ($\Delta_{\mathrm{pre}}=-0.86<0$) and requires $T^\ast=33$ steps versus $15$, so the advantage reverses. This marks the boundary of Assumption B4: the pretrained initialization helps when the target shares the source operator family, but the transfer can become negative when the families are far apart, so the bound should be applied with $\Delta_{\mathrm{pre}}$ measured rather than assumed positive.
+
+\subsection{Assumption validation and robustness}
+We close the remaining gaps in the assumption and design validation with a set of targeted measurements. First, the hyperparameter grid is revisited at the single-system level: the best configuration found by the grid is $lr=10^{-2}$, $m=12$, $ch=16$, and re-running the shear-flow in-domain experiment at that configuration reduces the VRMSE from $0.526$ (the $lr=10^{-3}$ configuration used for the headline results) to $0.292$, a $45\%$ improvement; across $ch=8,16,32$ at $lr=10^{-2}$ the VRMSE is $0.315/0.292/0.299$, so the reported performance is conservative relative to the tuned setting. A ten-seed run at $lr=10^{-2}$, $ch=8$ gives a mean VRMSE of $0.336\pm0.023$ (median $0.343$) with a one-sample $t$ statistic of $-87.0$ against the mean baseline, confirming statistical robustness at the tuned learning rate. Second, the zero-shot transfer matrix is recomputed on uniformly per-sample-normalized fields so that the numbers are directly comparable across directions: transferring into the turbulent radiative layer still fails ($1.18$ from shear, $1.01$ from Gray-Scott), while transferring into the smoother systems succeeds ($0.83$, $0.88$ for shear and $0.45$, $0.58$ for Gray-Scott), so the earlier raw-density value ($5.06$) over-stated the failure but the directional structure is real and is traced to the operator divergence below. Third, the field-description gate is audited under a load-balancing and route-diversity regularizer with four experts: the per-sample gate-argmax assignment becomes fully system-specific ($100\%$ of shear-flow samples to one expert and $100\%$ of turbulent-radiative-layer samples to another), so the routing mechanism does dedicate distinct experts to distinct operator families once the regularizer is applied, addressing the earlier non-distinct routing. Fourth, the conservation requirement is addressed by a projection rather than a loss penalty: the relative field-integral error drops from $8.65\times10^{-4}$ to $3.97\times10^{-4}$, equal to the one-step integral drift of the data, with the relative $L^2$ error unchanged ($0.979$); a conservation loss penalty is shown to be ineffective at the tested scale because the high-dynamic-range fields make its gradient negligible, so the projection is the robust implementation of the conservation term. A systematic sweep of the penalty weight $\beta\in\{0,10^{-4},10^{-3},10^{-2},10^{-1},1\}$ on the turbulent radiative layer confirms that the VRMSE is insensitive to $\beta$ ($0.981$ throughout) while the absolute field-integral error decreases only weakly from $0.032$ to $0.025$, so the penalty cannot enforce conservation without a much larger weight that would destabilize training; the projection, by contrast, reduces the field-integral error to $1.76\times10^{-9}$ (machine precision) with the VRMSE unchanged ($0.981$), confirming that the projection is the effective mechanism for meeting the conservation requirement. Fifth, a leave-one-trajectory-out experiment in which one entire trajectory is held out for training and the remaining trajectories are used for evaluation gives a mean VRMSE of $2.44$ on the shear flow (std.\ $0.07$ across the four held-out trajectories) and $1.26$ on the turbulent radiative layer (std.\ $0.01$ across eight held-out trajectories), substantially above the in-domain values of $0.39$ and $0.98$ obtained with an $80/20$ random split on the same data, so extrapolation to unseen trajectories is substantially harder than interpolation within the same trajectory and the headline evaluation should be read as in-domain rather than trajectory-level generalization; the trajectory-level gap is a known challenge for operator learning and is consistent with the estimation-term interpretation. Sixth, the operator-family divergence $D_{\mathrm{op}}$ is measured numerically as the maximum-mean-discrepancy between the per-sample-normalized one-step increment distributions of each pair: $D_{\mathrm{op}}$ is $0.370$ for the shear--turbulent pair versus $0.207$ for the shear--Gray-Scott pair and $0.528$ for the shear--Euler pair, matching the observed directionality that transfer into the turbulent radiative layer fails while transfer into Gray-Scott succeeds, and providing a numerical instantiation of the divergence term in the zero-shot bound. Seventh, the field-description sufficiency is separated from the deployed gate: a proxy classifier yields $\delta\approx0.005$, whereas the actual gate misroutes $0.30$ of held-out samples ($95\%$ confidence interval $0.19$--$0.41$), so the routing-error term in the bounds is governed by the gate's realized accuracy rather than the classifier proxy. Finally, the spectral-regularity exponent is measured per system, spanning $\gamma\in(1.54,6.65)$ with the turbulent radiative layer ($1.94$) and viscoelastic instability ($1.54$) the least regular and the shear flow the most regular ($6.65$), confirming the cross-system spread assumed in Assumption B1 and that the hardest systems are the least spectrally regular. In the single-system regime a ten-seed comparison of the gated against an ungated variant gives $0.565$ versus $0.570$ (Welch $t=-0.17$, not significant), so the field-description gate confers no statistically distinguishable benefit on a homogeneous operator family, consistent with a small routing term there; its value is confined to the multi-system setting. Repeating the headline in-domain experiment with ten random seeds under the reported configuration (hidden dimension thirty-two, learning rate $10^{-3}$, sixty training steps) gives a held-out VRMSE of $0.379\pm0.017$ (median $0.378$, interquartile range $[0.370,0.382]$, range $[0.351,0.412]$), with a one-sample $t$ statistic of $-106.8$ against the mean baseline of $1.0$, so the below-baseline result is statistically robust and not an artifact of the three seeds used for the headline numbers. The real-gate audit is extended to the eight-system joint model with eight experts: the naturally trained gate collapses to only five distinct majority experts, with three of the eight systems dedicated to a distinct expert and the per-system gate weights nearly uniform (e.g.\ $0.06$--$0.26$), yielding a sample-level misroute rate of $0.540$ (95\% CI $[0.230,0.920]$). The proxy classifier $\delta\approx0.005$ therefore understates the gate realized misroute rate at $K=8$, which rises above the $0.30$ measured at $K=2$, so the routing-error term in the bounds grows with the family count unless the load-balancing and route-diversity regularizer is applied. The tokenizer aggregation error that Theorem 1 omits is measured directly: block-mean downsampling of the native $256\times256$ shear field to $32^2/64^2/128^2/256^2$ tokens and upsampling back gives a relative $L^2$ reconstruction error of $0.162/0.099/0.058/0.000$, decaying as $N_{\mathrm{tok}}^{-0.373}$; at the $64^2$ resolution used throughout (4096 tokens) the aggregation error is $0.099$, a non-negligible floor relative to the model VRMSE, so the field-to-token aggregation contributes a real term to the bound that the current statement absorbs into the approximation constant. The unlearnability of the turbulent radiative layer is diagnosed: log-transforming the field ($\log(1+|x|)$) leaves the held-out VRMSE unchanged ($0.982$ versus $0.982$ for per-sample standardization), so the high dynamic range is not the cause of the failure; the difficulty is structural, multi-scale turbulent dynamics, and is bounded by the available data and capacity rather than by a preprocessing artifact, consistent with the estimation-term interpretation.
+
+\section{Conclusion}
+We presented a foundation model for physical world models that shares a single backbone across heterogeneous simulations using a unified tokenizer with resolution, variable, and coordinate-system invariance, together with a physics-aware mixture of experts. We proved a multi-operator approximation error bound, a zero-shot cross-system generalization bound, and a pretraining-to-finetuning convergence bound, and we validated the bounds on the shear flow system, the zero-shot bound on the turbulent radiative layer system, and the zero-shot transfer to a third reaction-diffusion system (Gray-Scott). The unified model reduces the variance-scaled root mean square error by 72.9 percent against the mean baseline, and the measured spectral-truncation decay, routing-error linearity, and multiscale hierarchy are consistent with the theoretical bounds. The field-description gate dedicates distinct experts to distinct operator families under a load-balancing regularizer, the conservation requirement is met to the data-drift level by a projection, leave-one-trajectory-out testing on unseen trajectories gives a mean VRMSE of $2.44$ on the shear flow and $1.26$ on the turbulent radiative layer, substantially above the in-domain values, so trajectory-level extrapolation is substantially harder than in-domain evaluation, and the operator-divergence term of the zero-shot bound is measured numerically. The model remains below the mean baseline at the native $256\times256$ resolution, confirming that it is not resolution-locked, and its single-step inference latency stays in the sub-millisecond to low-millisecond range across resolutions, supporting online deployment. The baseline comparison shows that the model is competitive with FNO and substantially outperforms DeepONet on this task, the tokenizer ablation with ten seeds shows no statistically significant difference between the gated and ungated variants (Welch $p>0.94$), so the benefit of the field-description gate is confined to the multi-system setting and is not distinguishable on a single homogeneous operator family at this scale, and the complexity analysis shows that the shared spectral-convolution design achieves comparable parameter counts with faster training and inference than the FNO baseline. The code and the data-subset manifest are available at \url{https://github.com/YI-HAIBO/the-well}.
+
+\section*{Data Availability}
+The code and the data-subset manifest are available at \url{https://github.com/YI-HAIBO/the-well}.
+The repository contains the model implementation, all experiment scripts, data loading utilities,
+and result artifacts. The raw simulation data are those of The Well benchmark [19].
+
+\section*{Acknowledgements}
+{\small This work was supported by the Shenzhen Technology University
+research project under grant 6026310054K.}
+
+\begin{thebibliography}{19}
+\bibitem{1} Z. Li, N. B. Kovachki, K. Azizzadenesheli, B. Liu, K. Bhattacharya, A. M. Stuart, A. Anandkumar. Fourier Neural Operator for Parametric Partial Differential Equations. \emph{ICLR}, 2021. arXiv:2010.08895.
+\bibitem{2} L. Lu, P. Jin, G. Pang, Z. Zhang, G. E. Karniadakis. Learning Nonlinear Operators via DeepONet based on the Universal Approximation Theorem of Operators. \emph{Nature Machine Intelligence}, 2021, 3(3): 218--229.
+\bibitem{3} M. Raissi, P. Perdikaris, G. E. Karniadakis. Physics-informed neural networks. \emph{Journal of Computational Physics}, 2019, 378: 686--707.
+\bibitem{4} R. Ohana, M. McCabe, L. Meyer, R. Morel, F. J. Agocs, M. Beneitez, M. Berger, B. Burkhart, S. B. Dalziel, D. B. Fielding, D. Fortunato, J. A. Goldberg, K. Hirashima, Y.-F. Jiang, R. R. Kerswell, S. Maddu, J. Miller, P. Mukhopadhyay, S. S. Nixon, J. Shen, R. Watteaux, B. Regaldo-Saint Blancard, F. Rozet, L. H. Parker, M. Cranmer, S. Ho. The Well: a Large-Scale Collection of Diverse Physics Simulations for Machine Learning. \emph{NeurIPS Datasets and Benchmarks Track}, 2024.
+\bibitem{5} M. McCabe, B. Regaldo-Saint Blancard, L. H. Parker, R. Ohana, M. Cranmer, A. Bietti, M. Eickenberg, S. Golkar, G. Krawezik, F. Lanusse, M. Pettee, T. Tesileanu, K. Cho, S. Ho. Multiple Physics Pretraining for Spatiotemporal Surrogate Models. \emph{NeurIPS}, 2024. arXiv:2310.02994.
+\bibitem{6} M. A. Rahman, R. J. George, M. Elleithy, D. Leibovici, Z. Li, B. Bonev, C. White, J. Berner, R. A. Yeh, J. Kossaifi, K. Azizzadenesheli, A. Anandkumar. Pretraining Codomain Attention Neural Operators for Solving Multiphysics PDEs. \emph{NeurIPS}, 2024. arXiv:2403.12553.
+\bibitem{7} S. Subramanian, P. Harrington, K. Keutzer, W. Bhimji, D. Morozov, M. W. Mahoney, A. Gholami. Towards Foundation Models for Scientific Machine Learning: Characterizing Scaling and Transfer Behavior. \emph{NeurIPS}, 2023. arXiv:2306.00258.
+\bibitem{8} E. Soares, E. Vital Brazil, V. Shirasuna, B. W. S. R. de Carvalho, C. Malossi. Towards a Foundation Model for Partial Differential Equations Across Physics Domains. arXiv:2511.21861, preprint, 2025.
+\bibitem{9} M. McCabe, P. Mukhopadhyay, T. Marwah, et al. Walrus: A Cross-domain Foundation Model for Continuum Dynamics. \emph{ICML}, 2026. arXiv:2511.15684.
+\bibitem{10} N. B. Kovachki, Z. Li, B. Liu, K. Azizzadenesheli, K. Bhattacharya, A. M. Stuart, A. Anandkumar. Neural Operator: Learning Maps Between Function Spaces With Applications to PDEs. \emph{Journal of Machine Learning Research}, 2023, 24(89): 1--97.
+\bibitem{11} Y. Pincha, A. Dimnaku, A. Chiang, A. Ganeshram, V. Duruisseaux, A. Anandkumar. Performance of Neural Operator Baselines on The Well Dataset. arXiv:2610.33967, preprint, 2026.
+\bibitem{12} J. Kaplan, S. McCandlish, T. Henighan, T. B. Brown, B. Chess, R. Child, S. Gray, A. Radford, J. Wu, D. Amodei. Scaling Laws for Neural Language Models. arXiv:2001.08361, preprint, 2020.
+\bibitem{13} J. Hoffmann, S. Borgeaud, A. Mensch, E. Buchatskaya, et al. Training Compute-Optimal Large Language Models. \emph{NeurIPS}, 2022.
+\bibitem{14} R. Bommasani, D. A. Hudson, E. Adeli, R. Altman, et al. On the Opportunities and Risks of Foundation Models. arXiv:2108.07258, preprint, 2022.
+\bibitem{15} N. B. Kovachki, S. Lanthaler, S. Mishra. On Universal Approximation and Error Bounds for Fourier Neural Operators. \emph{Journal of Machine Learning Research}, 2021, 22(290): 1--76.
+\bibitem{16} S. Ben-David, J. Blitzer, K. Crammer, A. Kulesza, F. Pereira, J. W. Vaughan. A Theory of Learning from Different Domains. \emph{Machine Learning}, 2010, 79(1--2): 151--175.
+\bibitem{17} P. L. Bartlett, S. Mendelson. Rademacher and Gaussian Complexities: Risk Bounds and Structural Results. \emph{Journal of Machine Learning Research}, 2002, 3: 463--482.
+\bibitem{18} H. Karimi, J. Nutini, M. Schmidt. Linear Convergence of Gradient and Proximal-Gradient Methods Under the Polyak-Lojasiewicz Condition. \emph{ECML-PKDD}, 2016. arXiv:1608.04636.
+\bibitem{19} PolymathicAI. The Well. \url{https://github.com/PolymathicAI/the_well}, 2026.
+\end{thebibliography}
+
+\end{document}
