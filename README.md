@@ -84,3 +84,4 @@ raw simulation data are hosted by PolymathicAI.
 ## Citation
 
 If you use this code or data, please cite the manuscript.
+- **C2-ext (multi-system scaling to k=8):** joint field-description MoE on the first k systems, k=2..8, adding Rayleigh-Benard (buoyancy), acoustic-scattering (pressure) and planetswe (surface height) to the original five. Mean held-out VRMSE: 0.861 / 0.738 / 0.680 / 0.775 / 0.735 / 0.750 / 0.710 for k=2..8; the three new systems reach 0.585 / 0.783 / 0.452 (all below the mean baseline), while the original five are unchanged (turb 0.99, visco 1.09). `data/c2_ext_results.json`, `code/experiments/c2_extend.py`.
