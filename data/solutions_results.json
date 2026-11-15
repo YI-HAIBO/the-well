@@ -1,0 +1,31 @@
+{
+  "A_lr_sweep": {
+    "lr1e-3_ch16": {"mean": 0.5263, "std": 0.0417, "per_seed": [0.4986, 0.4952, 0.5853]},
+    "lr3e-3_ch16": {"mean": 0.4073, "std": 0.0219, "per_seed": [0.4097, 0.4329, 0.3794]},
+    "lr1e-2_ch8": {"mean": 0.3751, "std": 0.0295, "per_seed": [0.3618, 0.4160, 0.3475]},
+    "lr1e-2_ch16": {"mean": 0.3325, "std": 0.0256, "per_seed": [0.3426, 0.3575, 0.2974]},
+    "lr1e-2_ch32": {"mean": 0.3070, "std": 0.0073, "per_seed": [0.2969, 0.3105, 0.3137]}
+  },
+  "B_zs_normalized": {
+    "in_domain": {"shear": 0.5102, "turb": 0.9764, "gray": 0.1260},
+    "zero_shot": {"shear_turb": 1.1753, "shear_gray": 0.4471, "turb_shear": 0.8335,
+                  "turb_gray": 0.5758, "gray_shear": 0.8786, "gray_turb": 1.0097}
+  },
+  "C_routing": {
+    "expert_occupancy_shear": [0.228, 0.376, 0.230, 0.166],
+    "expert_occupancy_turb": [0.280, 0.166, 0.046, 0.508],
+    "majority_expert_shear": 1, "majority_expert_turb": 3, "distinct": true,
+    "shear_frac_majority": 1.0, "turb_frac_majority": 1.0
+  },
+  "E_LO_trajectory": {"per_fold": {"traj0": 0.4856, "traj1": 0.4911, "traj2": 0.5104, "traj3": 0.5077},
+                      "mean": 0.4987, "max": 0.5104},
+  "F_seeds": {"main": {"mean": 0.5654, "std": 0.0601}, "ungated": {"mean": 0.5702, "std": 0.0608},
+              "welch_t": -0.168, "welch_df": 18.0},
+  "G_spectral_gamma": {"shear": 6.646, "turb": 1.941, "gray": 3.693, "euler": 2.752, "visco": 1.544},
+  "H2_Dop_mmd2": {"shear_turb": 0.3702, "shear_gray": 0.2071, "turb_gray": 0.3841,
+                  "shear_euler": 0.5280, "shear_visco": 0.2660},
+  "I_gate_delta": {"mean": 0.300, "ci95_low": 0.193, "ci95_high": 0.407},
+  "D2_conservation": {"data_drift_mean": 4.28e-4, "loss_penalty_ineffective": true},
+  "D3_conservation_projection": {"cons_err_raw": 8.65e-4, "cons_err_projected": 3.97e-4,
+                                 "data_drift": 3.97e-4, "relL2_raw": 0.979, "relL2_projected": 0.979}
+}
