@@ -39,6 +39,9 @@ data/             # Experimental result artifacts
 | `code/experiments/gap_fix5b.py` | Gap-fix round 5b: B4 model field-integral conservation error vs data drift |
 | `code/experiments/b3_online.py` | B3: finetuning-convergence validation of Theorem 3 (PL rate, init advantage) |
 | `code/experiments/b1_third_system.py` | B1: third-system (Gray-Scott) zero-shot cross-system generalization |
+| `code/experiments/c2_multisystem.py` | C2: multi-system scaling of the shared backbone (k=2..5) |
+| `code/experiments/c2_k5.py` | C2: k=5 (viscoelastic) run, merged with the k=2..4 seed-0 results |
+| `code/experiments/c1_c3.py` | C1: 256x256 native-resolution training; C3: online-deployment inference throughput |
 
 ## Data
 
@@ -57,12 +60,16 @@ data/             # Experimental result artifacts
 | `data/gap_fix5b_results.json` | Gap-fix round 5b results (B4 model conservation error) |
 | `data/b3_results.json` | B3 results (finetuning convergence, rho, mu_emp, T* pre vs scratch) |
 | `data/b1_results.json` | B1 results (3-system zero-shot VRMSE matrix) |
+| `data/c2_results.json` | C2 results (k=2..5 mean held-out VRMSE per system) |
+| `data/c1c3_results.json` | C1 (256x256 VRMSE, per-step time) + C3 (latency / throughput per resolution) |
 
 ## Data Loading
 
 - `code/data/download_well_subset.py` -- Parallel chunked download for The Well datasets
 - `code/data/extract_slice.py` -- Single-dataset slice extraction
 - `code/data/extract_slice_multi.py` -- Multi-dataset slice extraction
+- `code/data/fetch_well_data.py` -- Byte-range fetch of shear-flow and turbulent-radiative slices
+- `code/data/fetch_multi.py` -- Byte-range fetch of Gray-Scott, Euler, and viscoelastic slices
 
 ## Data Source
 
