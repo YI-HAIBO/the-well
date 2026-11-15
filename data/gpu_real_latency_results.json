@@ -1,0 +1,86 @@
+{
+  "device": "AMD Radeon RX 7650 GRE\u0000",
+  "torch": "2.4.1+cpu",
+  "results": {
+    "ch16_b1": {
+      "ch": 16,
+      "batch": 1,
+      "n_params": 655,
+      "cpu_latency_ms": 0.5873,
+      "gpu_latency_ms": 0.3019,
+      "cpu_throughput_s": 1735.6,
+      "gpu_throughput_s": 6224.6,
+      "measured_speedup": 1.95
+    },
+    "ch16_b8": {
+      "ch": 16,
+      "batch": 8,
+      "n_params": 655,
+      "cpu_latency_ms": 1.0588,
+      "gpu_latency_ms": 0.3202,
+      "cpu_throughput_s": 933.3,
+      "gpu_throughput_s": 6308.2,
+      "measured_speedup": 3.31
+    },
+    "ch32_b1": {
+      "ch": 32,
+      "batch": 1,
+      "n_params": 2319,
+      "cpu_latency_ms": 0.6359,
+      "gpu_latency_ms": 0.3139,
+      "cpu_throughput_s": 1640.6,
+      "gpu_throughput_s": 6322.0,
+      "measured_speedup": 2.03
+    },
+    "ch32_b8": {
+      "ch": 32,
+      "batch": 8,
+      "n_params": 2319,
+      "cpu_latency_ms": 3.3056,
+      "gpu_latency_ms": 0.6167,
+      "cpu_throughput_s": 258.7,
+      "gpu_throughput_s": 2650.9,
+      "measured_speedup": 5.36
+    },
+    "ch64_b1": {
+      "ch": 64,
+      "batch": 1,
+      "n_params": 8719,
+      "cpu_latency_ms": 2.0247,
+      "gpu_latency_ms": 0.5608,
+      "cpu_throughput_s": 474.2,
+      "gpu_throughput_s": 2501.1,
+      "measured_speedup": 3.61
+    },
+    "ch64_b8": {
+      "ch": 64,
+      "batch": 8,
+      "n_params": 8719,
+      "cpu_latency_ms": 9.5235,
+      "gpu_latency_ms": 0.6987,
+      "cpu_throughput_s": 104.8,
+      "gpu_throughput_s": 2353.7,
+      "measured_speedup": 13.63
+    },
+    "ch128_b1": {
+      "ch": 128,
+      "batch": 1,
+      "n_params": 33807,
+      "cpu_latency_ms": 3.568,
+      "gpu_latency_ms": 0.692,
+      "cpu_throughput_s": 252.4,
+      "gpu_throughput_s": 2645.1,
+      "measured_speedup": 5.16
+    },
+    "ch128_b8": {
+      "ch": 128,
+      "batch": 8,
+      "n_params": 33807,
+      "cpu_latency_ms": 13.3101,
+      "gpu_latency_ms": 1.0991,
+      "cpu_throughput_s": 82.2,
+      "gpu_throughput_s": 141.4,
+      "measured_speedup": 12.11
+    }
+  }
+}
