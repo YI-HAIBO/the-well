@@ -42,6 +42,9 @@ data/             # Experimental result artifacts
 | `code/experiments/c2_multisystem.py` | C2: multi-system scaling of the shared backbone (k=2..5) |
 | `code/experiments/c2_k5.py` | C2: k=5 (viscoelastic) run, merged with the k=2..4 seed-0 results |
 | `code/experiments/c1_c3.py` | C1: 256x256 native-resolution training; C3: online-deployment inference throughput |
+| `code/experiments/sol.py` | Limitation fixes: lr sweep, normalized zero-shot matrix, route-distinct regularizer, LO-trajectory, seed significance (modes a/b) |
+| `code/experiments/sol2.py` | Limitation fixes: conservation (raw) sweep, MMD-based operator divergence D_op |
+| `code/experiments/sol3.py` | Limitation fix: conservation projection (data-drift-level conservation, no accuracy loss) |
 
 ## Data
 
@@ -62,6 +65,7 @@ data/             # Experimental result artifacts
 | `data/b1_results.json` | B1 results (3-system zero-shot VRMSE matrix) |
 | `data/c2_results.json` | C2 results (k=2..5 mean held-out VRMSE per system) |
 | `data/c1c3_results.json` | C1 (256x256 VRMSE, per-step time) + C3 (latency / throughput per resolution) |
+| `data/solutions_results.json` | Limitation-solution results (lr, normalized zero-shot, route-distinct, conservation projection, D_op MMD, gate delta) |
 
 ## Data Loading
 
