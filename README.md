@@ -35,6 +35,8 @@ data/             # Experimental result artifacts
 | `code/experiments/gap_fix2.py` | Gap-fix round 2: joint multi-system pre-training, expert-capacity ablation |
 | `code/experiments/gap_fix3.py` | Gap-fix round 3: 128x128 resolution generalization |
 | `code/experiments/gap_fix4.py` | Gap-fix round 4: capacity/data-regime scaling, UNet baseline |
+| `code/experiments/gap_fix5.py` | Gap-fix round 5: per-sample gate audit, conservation diagnostic, hyperparameter extension |
+| `code/experiments/gap_fix5b.py` | Gap-fix round 5b: B4 model field-integral conservation error vs data drift |
 
 ## Data
 
@@ -49,6 +51,8 @@ data/             # Experimental result artifacts
 | `data/gap_fix2_results.json` | Gap-fix round 2 results (joint multi-system, 4-expert ablation) |
 | `data/gap_fix3_results.json` | Gap-fix round 3 results (128x128 in-domain + joint) |
 | `data/gap_fix4_results.json` | Gap-fix round 4 results (capacity sweep, UNet, joint ch32) |
+| `data/gap_fix5_results.json` | Gap-fix round 5 results (B5 gate audit, B4 data drift, B2 hyperparam) |
+| `data/gap_fix5b_results.json` | Gap-fix round 5b results (B4 model conservation error) |
 
 ## Data Loading
 
