@@ -38,6 +38,7 @@ data/             # Experimental result artifacts
 | `code/experiments/gap_fix5.py` | Gap-fix round 5: per-sample gate audit, conservation diagnostic, hyperparameter extension |
 | `code/experiments/gap_fix5b.py` | Gap-fix round 5b: B4 model field-integral conservation error vs data drift |
 | `code/experiments/b3_online.py` | B3: finetuning-convergence validation of Theorem 3 (PL rate, init advantage) |
+| `code/experiments/b1_third_system.py` | B1: third-system (Gray-Scott) zero-shot cross-system generalization |
 
 ## Data
 
@@ -55,6 +56,7 @@ data/             # Experimental result artifacts
 | `data/gap_fix5_results.json` | Gap-fix round 5 results (B5 gate audit, B4 data drift, B2 hyperparam) |
 | `data/gap_fix5b_results.json` | Gap-fix round 5b results (B4 model conservation error) |
 | `data/b3_results.json` | B3 results (finetuning convergence, rho, mu_emp, T* pre vs scratch) |
+| `data/b1_results.json` | B1 results (3-system zero-shot VRMSE matrix) |
 
 ## Data Loading
 
