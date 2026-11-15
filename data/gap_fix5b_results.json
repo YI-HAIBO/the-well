@@ -1,0 +1,12 @@
+{
+  "shear": {
+    "model_integral_err": 5.843529187715971,
+    "data_drift": 1.5136256129503286e-06,
+    "mean_baseline_integral_err": 6.667820483786412e-08
+  },
+  "turb": {
+    "model_integral_err": 0.06620403952323474,
+    "data_drift": 0.00024522833588819666,
+    "mean_baseline_integral_err": 9.906034966670282e-08
+  }
+}
