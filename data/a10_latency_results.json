@@ -1,0 +1,43 @@
+{
+  "device": "NVIDIA A10",
+  "vram_gb": 23.8,
+  "torch": "2.13.0+cu130",
+  "cuda": "13.0",
+  "backend": "CUDA",
+  "source": "ModelScope Notebook (direct execution, no SSH tunnel)",
+  "note": "mirrors gpu_real_latency.py / a10_latency.py MoE-lite; warmup 30 + 200 synchronized iterations",
+  "results": {
+    "ch16_b1": {
+      "sync_ms": 0.307,
+      "async_ms": 0.272
+    },
+    "ch16_b8": {
+      "sync_ms": 0.305,
+      "async_ms": 0.262
+    },
+    "ch32_b1": {
+      "sync_ms": 0.315,
+      "async_ms": 0.277
+    },
+    "ch32_b8": {
+      "sync_ms": 0.317,
+      "async_ms": 0.282
+    },
+    "ch64_b1": {
+      "sync_ms": 0.337,
+      "async_ms": 0.319
+    },
+    "ch64_b8": {
+      "sync_ms": 0.479,
+      "async_ms": 0.364
+    },
+    "ch128_b1": {
+      "sync_ms": 0.318,
+      "async_ms": 0.283
+    },
+    "ch128_b8": {
+      "sync_ms": 0.776,
+      "async_ms": 0.718
+    }
+  }
+}
