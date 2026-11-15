@@ -1,0 +1,14 @@
+{
+  "k": {
+    "2": {"systems": ["shear", "turb"], "mean_vrmse": 0.861,
+          "per_system": {"shear": 0.722, "turb": 0.999}},
+    "3": {"systems": ["shear", "turb", "gray"], "mean_vrmse": 0.738,
+          "per_system": {"shear": 0.72, "turb": 0.989, "gray": 0.505}},
+    "4": {"systems": ["shear", "turb", "gray", "euler"], "mean_vrmse": 0.68,
+          "per_system": {"shear": 0.758, "turb": 0.995, "gray": 0.462, "euler": 0.504}},
+    "5": {"systems": ["shear", "turb", "gray", "euler", "visco"], "mean_vrmse": 0.774805212771071,
+          "per_system": {"shear": 0.7812110934904664, "turb": 0.9899476242248048,
+                         "gray": 0.4684715782424568, "euler": 0.5477887396630747,
+                         "visco": 1.0866070282345524}}
+  }
+}
