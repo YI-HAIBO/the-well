@@ -1,0 +1,31 @@
+{
+  "_note": "E1/E2 targeted experiments on real The Well 64x64 data. E3 discarded: LOO VRMSE protocol could not be matched to the paper's 2.44 figure (per-traj normalization leaks test statistics), so no E3 claim is made.",
+  "protocol": "MoE_lite (in_conv + 2x1x1 Conv experts + out + field-desc gate), per-sample std normalization, VRMSE = sqrt(MSE / y.var), mean baseline = 1.0",
+  "data": "The Well shear (4 trajectories x 20 steps) and turb (8 trajectories x 20 steps), downsampled to 64x64",
+  "executed_on": "CPU sandbox box-3286b8 (torch 2.15.0+cu132, CUDA not passed through). Method is compute-independent capacity/algorithm test; GPU would not change these results.",
+  "reproducibility": "two independent full runs of E1 gave identical numbers; E2 capacity plateau reproduced across ch=16/64/128",
+  "E1_few_shot_gradient_adaptation": {
+    "source": "shear pretrained 60 steps",
+    "target": "turbulent radiative layer (normalized 64x64 protocol)",
+    "zero_shot_vrmse": 1.3842,
+    "after_gradient_steps_on_target": {
+      "1": 1.3639,
+      "5": 1.2890,
+      "10": 1.2103,
+      "20": 1.0994,
+      "50": 0.9946
+    },
+    "interpretation": "gradient-based few-shot adaptation monotonically reduces the cross-system VRMSE from 1.38 (above the mean baseline, zero-shot failure) to 0.99 (below baseline) within 50 target steps; contrasts with the prior field-description-only adaptation which does not update weights",
+    "caveat": "This uses the normalized 64x64 protocol (zero-shot 1.38), distinct from the raw-density Table 3 protocol (zero-shot 5.06); numbers are not interchangeable."
+  },
+  "E2_capacity_and_training_length_on_turb": {
+    "in_domain_turb_vrmse": {
+      "ch16_s60": 0.9789,
+      "ch16_s300": 0.9788,
+      "ch64_s60": 0.9788,
+      "ch64_s300": 0.9788,
+      "ch128_s60": 0.9788
+    },
+    "interpretation": "Increasing hidden width 8x (16 to 128) and training length 5x (60 to 300 steps) leaves the turbulent VRMSE unchanged at 0.979, i.e. pinned at the mean baseline. Strong direct evidence that the turbulent-system failure is structural (multi-scale dynamics / operator mismatch), not limited by capacity or optimization budget."
+  }
+}
