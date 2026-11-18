@@ -1,0 +1,62 @@
+{
+  "cpu": [
+    {
+      "ch": 16,
+      "open_ms": 0.3197,
+      "closed_ms_median": 0.3305,
+      "closed_ms_mean": 0.3423,
+      "rollout_100s_total_ms": 34.3
+    },
+    {
+      "ch": 32,
+      "open_ms": 0.4318,
+      "closed_ms_median": 0.372,
+      "closed_ms_mean": 0.3797,
+      "rollout_100s_total_ms": 38.0
+    },
+    {
+      "ch": 64,
+      "open_ms": 0.535,
+      "closed_ms_median": 0.5509,
+      "closed_ms_mean": 0.5912,
+      "rollout_100s_total_ms": 59.2
+    },
+    {
+      "ch": 128,
+      "open_ms": 1.3292,
+      "closed_ms_median": 1.2523,
+      "closed_ms_mean": 1.3492,
+      "rollout_100s_total_ms": 135.0
+    }
+  ],
+  "amd_dml_gpu": [
+    {
+      "ch": 16,
+      "open_ms": 0.545,
+      "closed_ms_median": 0.2377,
+      "closed_ms_mean": 0.2494,
+      "rollout_100s_total_ms": 25.0
+    },
+    {
+      "ch": 32,
+      "open_ms": 0.2023,
+      "closed_ms_median": 0.2205,
+      "closed_ms_mean": 0.2271,
+      "rollout_100s_total_ms": 22.7
+    },
+    {
+      "ch": 64,
+      "open_ms": 0.194,
+      "closed_ms_median": 0.2313,
+      "closed_ms_mean": 0.2429,
+      "rollout_100s_total_ms": 24.3
+    },
+    {
+      "ch": 128,
+      "open_ms": 0.1936,
+      "closed_ms_median": 0.2566,
+      "closed_ms_mean": 0.2552,
+      "rollout_100s_total_ms": 25.6
+    }
+  ]
+}
