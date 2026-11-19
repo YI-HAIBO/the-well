@@ -12,7 +12,13 @@ numbers of *Learning cross-system operators with lightweight mixture-of-experts*
 
 ## Data
 
-The pipeline expects the official The-Well shear_flow slices in `data/`:
+The pipeline expects the official The-Well shear_flow slices in `data/`.
+If the local slices are missing, fetch them from the public `repro-data-v1`
+release (the same files the paper's numbers were produced from):
+
+```bash
+python fetch_data.py all     # downloads slice_train/slice_test, reassembles turb
+```
 
 | file | content | official source |
 |---|---|---|
@@ -20,9 +26,12 @@ The pipeline expects the official The-Well shear_flow slices in `data/`:
 | `data/slice_test.npz` | 4 test trajectories, same layout | `.../shear_flow/data/test/shear_flow_Reynolds_1e5_Schmidt_2e0.hdf5` |
 | `turb_rad_layer.hdf5` (optional) | 8 trajectories of `turbulent_radiative_layer_2D` for the cross-system check | The Well v1.0, `turbulent_radiative_layer_2D` |
 
-Full-resolution HDF5 files are available from the official Flatiron mirror
-(13.4 GB for the full shear train file); the bundled NPZ slices are fixed
-4-trajectory extracts used for the CPU-scale experiments in the paper.
+The `slice_train.npz` and `slice_test.npz` assets are bundled directly in the
+release; the 635 MB `turb_rad_layer.hdf5` is shipped as split parts
+(`turb_rad_layer.hdf5.part_NN`) and `fetch_data.py` reassembles them
+automatically. Full-resolution HDF5 files are available from the official
+Flatiron mirror (13.4 GB for the full shear train file); the bundled NPZ slices
+are fixed 4-trajectory extracts used for the CPU-scale experiments in the paper.
 
 ## Run
 
