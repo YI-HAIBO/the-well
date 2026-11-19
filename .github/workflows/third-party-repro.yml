@@ -1,0 +1,75 @@
+name: third-party-repro
+
+# Simulates an independent third-party reproduction on a clean CI runner
+# (no local state): clone -> install pinned deps -> fetch public data -> run
+# the one-click script -> verify headline numbers within tolerance -> publish
+# a run report + artifact. This drives the "third-party independent
+# reproduction" requirement as far as the author can; a genuinely external
+# party re-running is the only remaining step.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 1 * *"   # re-verify monthly that public data + scripts still reproduce
+
+jobs:
+  repro:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned deps
+        run: pip install -r requirements.txt
+
+      - name: Fetch public reproduction data (no token needed)
+        run: python code/fetch_data.py all
+
+      - name: Environment self-check
+        run: python code/check_env.py
+
+      - name: Run one-click reproduction
+        run: python code/reproduce_minimal.py
+
+      - name: Verify headline numbers within tolerance
+        run: |
+          python - <<'PY'
+          import json
+          r = json.load(open("code/reproduce_minimal_results.json"))
+          checks = [("in_domain_80_20_vrmse", 0.346, 0.02),
+                    ("loo_vrmse", 0.232, 0.03)]
+          ok = True
+          for key, exp, tol in checks:
+              got = r[key]["mean"]
+              good = abs(got - exp) <= tol
+              ok &= good
+              print(f"{key}: {got} (expected ~{exp} +/- {tol}) {'OK' if good else 'MISMATCH'}")
+          for k in ("turb_zero_shot_vrmse", "turb_fewshot_adapted_vrmse"):
+              if k in r:
+                  print(f"{k}: {r[k]['mean']}")
+          raise SystemExit(0 if ok else 1)
+          PY
+
+      - name: Publish reproduction report
+        if: always()
+        run: |
+          {
+            echo "## Third-party reproduction run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo ""
+            echo '```'
+            cat code/reproduce_minimal_results.json 2>/dev/null || echo "no results (see logs)"
+            echo '```'
+            echo ""
+            echo "Runner: ${{ runner.os }} / $(python --version)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repro-minimal-results
+          path: code/reproduce_minimal_results.json
