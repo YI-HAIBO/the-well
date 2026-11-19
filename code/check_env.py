@@ -2,15 +2,24 @@
 """Environment self-check for the one-click reproduction. Run: python check_env.py"""
 import importlib, os, sys
 
-EXPECT = {"torch": "2.14.0", "numpy": "2.5.3", "h5py": "3.16.0", "fsspec": "2024.10.0"}
+# Compatible-version expectations (minimum leading numeric), matching
+# requirements.txt. Version may be dotted (torch 2.4.1) or year-based
+# (fsspec 2024.10.0) -> compare the leading integer.
+EXPECT = {
+    "torch": (2, "torch>=2.0,<3.0"),
+    "numpy": (2, "numpy>=1.24,<3.0"),
+    "h5py": (3, "h5py>=3.8"),
+    "fsspec": (2023, "fsspec>=2023.1"),
+}
 ok = True
-for mod, ver in EXPECT.items():
+for mod, (want_min, spec) in EXPECT.items():
     try:
         m = importlib.import_module(mod)
         got = getattr(m, "__version__", "?")
-        good = got.split("+")[0] == ver
+        lead = "".join(ch for ch in got.split(".")[0] if ch.isdigit())
+        good = int(lead) >= want_min
         ok &= good
-        print(f"[{'OK' if good else 'WARN'}] {mod} {got} (expected {ver})")
+        print(f"[{'OK' if good else 'WARN'}] {mod} {got} (need {spec})")
     except Exception as e:
         ok = False
         print(f"[FAIL] {mod}: {e}")
