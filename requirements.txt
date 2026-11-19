@@ -1,7 +1,10 @@
 # The Well paper — minimal CPU reproduction environment
-# Python >= 3.11 recommended. Install with:
-#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.14.0
-numpy==2.5.3
-h5py==3.16.0
-fsspec==2024.10.0
+# Python 3.10-3.12 recommended. Install with:
+#   pip install -r requirements.txt
+# (CPU-only torch is fine; on Linux pip pulls the CPU wheel automatically.
+#  If you get a CUDA wheel you don't need, add:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu)
+torch>=2.0,<3.0
+numpy>=1.24,<3.0
+h5py>=3.8
+fsspec>=2023.1
