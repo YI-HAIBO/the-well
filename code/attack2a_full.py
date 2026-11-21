@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-"""E10 FULL-DATA re-test on the complete official shear train split
-(32 trajectories, 13.44 GB), replacing the 8-trajectory slice used in
-attack2a_e3_e10.py.  This closes the "full official data not used" gap.
+"""E10 FULL-DATA re-test on the complete official shear train HDF5
+(full official train file, 13.44 GB), replacing the 8-trajectory slice used
+in attack2a_e3_e10.py.  This closes the "full official data not used" gap.
 
 Protocol identical to attack2a_e3_e10.py (MoE_lite ch16, 64x64 block-averaged
 pressure, per-sample-std VRMSE, mean baseline 1.0), scaled up:
 
-  - trajectory-count scaling: train on k in {1,2,4,8,16,28} of trajectories
-    0..27 (3 random subsets each), fixed eval on trajectories 28..31
-  - temporal-coverage scaling at k=28: f in {0.25,0.5,1.0}
+  - trajectory-count scaling: train on k in {1,2,4,...,pool} of the training
+    trajectories (3 random subsets each), fixed held-out eval trajectories
+  - temporal-coverage scaling at full pool: f in {0.25,0.5,1.0}
 
-Reads the full train HDF5 trajectory-by-trajectory (each ~420 MB raw), so
-peak memory stays ~1-2 GB.  Results -> attack2a_full_results.json
+Trajectory counts are read from the file (shear_flow.yaml says
+n_trajectories_per_file=4 for this parameter family) rather than assumed.
+Reads the full train HDF5 trajectory-by-trajectory, so peak memory stays
+~1-2 GB.  Results -> attack2a_full_results.json
 """
 import numpy as np, torch, torch.nn as nn, os, json, time, h5py
 
@@ -39,6 +41,10 @@ with h5py.File(FULL, "r") as f:
     P64 = np.stack([downsample(np.array(press[i], dtype=np.float32)) for i in range(N_TRAJ)])
 print("loaded P64:", P64.shape, "(%.0fs)" % (time.time() - t0), flush=True)
 N_STEPS = P64.shape[1]
+# The Well shear_flow.yaml says n_trajectories_per_file=4 for this family;
+# do not assume 32. Hold out ~20% (at least 1) for eval, train on the rest.
+N_EVAL = max(1, min(4, N_TRAJ // 5))
+print(f"n_traj={N_TRAJ}, eval={N_EVAL}, train pool={N_TRAJ - N_EVAL}", flush=True)
 
 def mk_xy(T, n_in=4):
     X, Y = [], []
@@ -85,21 +91,23 @@ def eval_m(m, X, Y):
     with torch.no_grad():
         return vrmse(m(torch.tensor(X)).numpy(), Y)
 
-results = {"protocol": "MoE_lite ch16 per-sample-std VRMSE, 64x64 shear pressure, FULL 32 official train trajectories",
+results = {"protocol": "MoE_lite ch16 per-sample-std VRMSE, 64x64 shear pressure, FULL official train file (all trajectories)",
            "n_traj_total": int(N_TRAJ), "n_steps": int(N_STEPS), "E10_full": {}}
 e10 = {}
 
 # ---------------- trajectory-count scaling ----------------
-print("\n=== E10-full: trajectory-count scaling (fixed eval trajs 28..31) ===", flush=True)
-POOL = list(range(N_TRAJ - 4))       # 0..27 training pool
-EVAL = list(range(N_TRAJ - 4, N_TRAJ))  # 28..31 fixed eval
+print("\n=== E10-full: trajectory-count scaling (fixed eval trajs %d..%d) ==="
+      % (N_TRAJ - N_EVAL, N_TRAJ - 1), flush=True)
+POOL = list(range(N_TRAJ - N_EVAL))          # training pool
+EVAL = list(range(N_TRAJ - N_EVAL, N_TRAJ))  # fixed eval
 Xev = np.concatenate([mk_xy(P64[i])[0] for i in EVAL])
 Yev = np.concatenate([mk_xy(P64[i])[1] for i in EVAL])
 Xevs, Yevs = std_ps(Xev), std_ps(Yev)
 del Xev, Yev
 
+ks = sorted({k for k in [1, 2, 4, 8, 16, 32, len(POOL)] if 1 <= k <= len(POOL)})
 rng = np.random.RandomState(42)
-for k in [1, 2, 4, 8, 16, len(POOL)]:
+for k in ks:
     runs = []
     for rep in range(3):
         sel = sorted(rng.choice(POOL, size=k, replace=False).tolist())
