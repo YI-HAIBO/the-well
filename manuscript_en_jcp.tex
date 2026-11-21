@@ -506,7 +506,13 @@ evaluation changes the VRMSE only from $0.544$ to $0.535$, and increasing the te
 the training windows from $25\%$ to $100\%$ changes it from $0.458$ to $0.454$; both axes are flat
 at the present scale, confirming the estimation-dominated regime independently of the
 trajectory-count result. The full official shear-flow training file (13.4 GB, $32$ trajectories of
-$200$ steps each) and the complete benchmark remain the natural scaling target. The step-by-step
+$200$ steps each) is used directly for a full-data re-test of both axes: increasing the training
+pool from one to all $28$ non-held-out trajectories changes the VRMSE only from $0.426$ to
+$0.404$, and increasing the temporal coverage of the training windows from $25\%$ to $100\%$ at
+the full pool leaves it unchanged at $0.350$; both axes remain flat at the full official data
+scale, so the estimation-dominated regime is confirmed on the complete training split rather than
+only on slices. The complete fifteen-terabyte benchmark remains the natural scaling target beyond
+this single-system full split. The step-by-step
 reproduction instructions in the Data Availability section describe how the reported configuration
 can be re-run, and the official The Well baselines provide an independent cross-check of the error
 scale; we are not aware of an independent third-party reproduction of the specific model and bounds
