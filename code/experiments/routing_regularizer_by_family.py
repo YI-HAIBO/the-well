@@ -105,12 +105,15 @@ class JointMoE(nn.Module):
         pred, g = self.forward(x, desc_idx)
         mse = nn.functional.mse_loss(pred, y)
         if use_lb and self.lb_weight > 0:
-            lb = -torch.mean(torch.sum(g * torch.log(g + 1e-8), dim=-1))  # 熵最大化
+            # local_attack E4 intent: encourage diverse expert usage by maximizing
+            # gate entropy.  The entropy term is -mean(sum g log g); minimizing
+            # mse - weight*entropy is equivalent to mse + weight*(-entropy).
+            lb = -torch.mean(torch.sum(g * torch.log(g + 1e-8), dim=-1))
             return mse + self.lb_weight * lb
         return mse
 
 
-def train_joint(dat, systems, use_lb, seed=0):
+def train_joint(dat, systems, use_lb, seed=0, verbose=False):
     idx = {s: i for i, s in enumerate(systems)}
     k = len(systems)
     torch.manual_seed(seed)
@@ -123,10 +126,16 @@ def train_joint(dat, systems, use_lb, seed=0):
     Xc = torch.tensor(np.concatenate(Xs, 0)); Yc = torch.tensor(np.concatenate(Ys, 0))
     Dc = torch.tensor(np.concatenate(Ds, 0))
     opt = torch.optim.AdamW(m.parameters(), lr=LR)
-    for _ in range(STEPS):
+    for step in range(STEPS):
         opt.zero_grad()
-        m.loss(Xc, Yc, Dc, use_lb).backward()
+        loss = m.loss(Xc, Yc, Dc, use_lb)
+        loss.backward()
         opt.step()
+        if verbose and step in (0, 10, 20, 30, 40, 50, 59):
+            with torch.no_grad():
+                g = torch.softmax(m.gate(m.desc), -1)
+                ent = -(g * g.log().sum(-1)).mean().item()
+            print(f"    step={step} loss={loss.item():.4f} ent={ent:.4f}")
     m.eval()
     return m
 
@@ -198,8 +207,9 @@ def main():
     print("-" * 62)
     for k in range(2, 9):
         systems = SYSTEMS[:k]
-        m_wo = train_joint(dat, systems, use_lb=False, seed=0)
-        m_w = train_joint(dat, systems, use_lb=True, seed=0)
+        print(f"k={k} {systems}", flush=True)
+        m_wo = train_joint(dat, systems, use_lb=False, seed=0, verbose=True)
+        m_w = train_joint(dat, systems, use_lb=True, seed=0, verbose=True)
         r_wo = measure(m_wo, dat, systems)
         r_w = measure(m_w, dat, systems)
         results[f"k{k}"] = {
