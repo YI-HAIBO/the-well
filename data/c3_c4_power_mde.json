@@ -1,0 +1,63 @@
+{
+  "purpose": "Round 38 post-hoc statistical resolution for limitations #3/#4",
+  "mde_definition": "two-sample 80% power minimum detectable absolute mean difference, alpha=0.05, pooled-SD approximation",
+  "tokenizer_capacity_20_seed": {
+    "ch16_2exp_vs_ch32_2exp": {
+      "n_a": 20,
+      "n_b": 20,
+      "mean_a": 0.1298,
+      "mean_b": 0.1143,
+      "sd_a": 0.013,
+      "sd_b": 0.0125,
+      "welch_t": 3.823,
+      "p_normal_approx": 0.0001317,
+      "mde_80": 0.0113
+    },
+    "ch16_2exp_vs_ch16_4exp": {
+      "n_a": 20,
+      "n_b": 20,
+      "mean_a": 0.1298,
+      "mean_b": 0.1329,
+      "sd_a": 0.013,
+      "sd_b": 0.0169,
+      "welch_t": -0.653,
+      "p_normal_approx": 0.514,
+      "mde_80": 0.0134
+    }
+  },
+  "pretraining_full_capacity_5_seed": {
+    "ch64_mask": {
+      "n_a": 5,
+      "n_b": 5,
+      "mean_a": 0.2286,
+      "mean_b": 0.2293,
+      "sd_a": 0.0093,
+      "sd_b": 0.0113,
+      "welch_t": -0.104,
+      "p_normal_approx": 0.9172,
+      "mde_80": 0.0183
+    },
+    "ch64_contrast": {
+      "n_a": 5,
+      "n_b": 5,
+      "mean_a": 0.2303,
+      "mean_b": 0.2293,
+      "sd_a": 0.0091,
+      "sd_b": 0.0113,
+      "welch_t": 0.16,
+      "p_normal_approx": 0.8729,
+      "mde_80": 0.0182
+    },
+    "ch64_both": {
+      "n_a": 5,
+      "n_b": 5,
+      "mean_a": 0.2315,
+      "mean_b": 0.2293,
+      "sd_a": 0.0124,
+      "sd_b": 0.0113,
+      "welch_t": 0.295,
+      "p_normal_approx": 0.7679,
+      "mde_80": 0.0211
+    }
+  }
+}
