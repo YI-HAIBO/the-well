@@ -464,10 +464,14 @@ only when the load-balancing and route-diversity regularizer is applied; without
 training collapses toward a small number of experts and the misassignment rate rises with the number
 of operator families (from $0.30$ at two families to $0.540$ at eight). The regularizer is therefore
 adopted as the default in all multi-system experiments, and the reported routing results should be
-read as conditional on this regularizer. A direct comparison of learned routing with and without a
-regularizer, at each family count, would further isolate the contribution of the regularizer itself,
-but the present experiments already establish that routing without it is non-viable in the
-multi-family setting.
+read as conditional on this regularizer. A direct comparison of learned routing with and without the
+load-balancing (entropy-maximization) term alone, at each family count from two to eight under a
+60-step joint-training protocol with independently drawn slices, isolates its contribution: both
+configurations fully separate two and three families, the entropy term leaves the sample-level
+misassignment unchanged at four, five, seven, and eight families, and it increases the shared-expert
+share at six families. The fully dedicated routing reported above is therefore attributable to the
+complete regularizer, including its route-diversity component, rather than to load balancing alone,
+and routing without the full regularizer remains non-viable in the multi-family setting.
 
 \subsection{Gate-only adaptation}
 The field-description embedding alone does not compensate for operator drift between families. A
